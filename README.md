@@ -1,1 +1,1 @@
-# ARD-Implementation
+# Automated Responsible Disclosure Implementation
