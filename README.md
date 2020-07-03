@@ -46,3 +46,11 @@ Manage the bounty by a second smart contract deployed by the Vendor
     - 1 Tx: as soon the smart contract goes to the Disclosed state it needs to receive as input the location of the vulnerability data. This means the location is known in advance
     - 2 Txs: a first transaction is used to disclose the secret and set the smart contract in the Disclosed state. With a second transaction the IL component stores into the smart contract the location of the vulnerability data. This means the smart contract requires the Ethereum address of IL, and an additional state
 - [ ] Write the tests for the smart contract
+
+## Requirements
+
+NodeJs, Truffle
+
+Install openzeppelin contracts with
+    
+    npm install
