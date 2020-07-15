@@ -6,7 +6,7 @@
        "maxPeerCount": 3,
        "blockToLive":0,
        "memberOnlyRead": false,
-       "membersOnlyWrite": true//only vendor and authority can write data
+       "membersOnlyWrite": true
   },
 
   {
@@ -14,9 +14,9 @@
        "policy": "OR('Org1MSP.member')",
        "requiredPeerCount": 0,
        "maxPeerCount": 2,
-       "blockToLive":0,// The data is retained forever in the blockchain, never purged
-       "membersOnlyRead":true,//other members in channel cannot read the data
-       "membersOnlyWrite":true,//only authority can write data 
+       "blockToLive":0,
+       "membersOnlyRead":true,
+       "membersOnlyWrite":true,
        "endorsementPolicy": {
         "signaturePolicy": "OR('Org1MSP.member')"
     }
