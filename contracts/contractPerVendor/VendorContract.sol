@@ -3,8 +3,6 @@ pragma solidity ^0.6.0;
 // import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
-// TODO Change the variables with the data types proposed in the ARD document
-
 contract VendorContract is Ownable {
 
     constructor(address payable _vendor) public {
@@ -69,6 +67,9 @@ contract VendorContract is Ownable {
         uint amount;
     }
 
+    // TODO remove vendor address and vendorID from this struct
+        // vendor address is the owner of Ownable
+        // TODO decide if we need to keep vendorId
     struct Metadata {
 
         address payable vendor;     // The address of the vendor
@@ -218,7 +219,7 @@ contract VendorContract is Ownable {
      * @param reason The reason why vulnerability has been deleted
      */
 
-    // TODO make this function a cooperation between Authority and Vendor
+    // TODO make this function a cooperation between Authority and Vendor ?
     function cancelBounty(bytes32 _vulnerabilityId, string calldata reason) external onlyAuhtority {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];

@@ -13,7 +13,6 @@ import "@openzeppelin/contracts/access/Ownable.sol";
  *
  */
 
- // TODO Change the variables with the data types proposed in the ARD document
 contract AuthorityContract is Ownable {
 
     // Logs
@@ -104,6 +103,9 @@ contract AuthorityContract is Ownable {
     }
 
     // mapping(address => VendorContract) public vendorContracts;// map vendor address to deposit vendor contract
+
+    // TODO Remove operation is delicate
+        // decide if we want array with "holes" (as it is now), or we break the order by placing the last element into the element to remove
 
     mapping(address => uint) vendorArrayIndexes; // maps a vendor address to the position of its smart contract in the array
     VendorRecord[] vendorContractsList;      // The array provides a list of the vendor contracts, not possible to retrieve it from a mapping
@@ -243,7 +245,7 @@ contract AuthorityContract is Ownable {
      * @param _vulnerabilityId The condract identifier.
      * @param _approved The approval parameter.
      */
-    function approve(uint32 _timelock, bytes32 _vulnerabilityId, bool _approved)
+    function approve(bytes32 _vulnerabilityId, uint32 _timelock, bool _approved)
         public
         onlyOwner()
         futureTimelock(_timelock)
@@ -327,7 +329,6 @@ contract AuthorityContract is Ownable {
         vendorContract.payBounty(_vulnerabilityId);
     }
 
-    // TODO why these two functions are not view?
     /**
      * @notice Get contract details.
      * @dev Need to split in two functions to avoid stack too deep exc
@@ -402,12 +403,13 @@ contract AuthorityContract is Ownable {
      * @dev Get the list of registered vendors
      * @return The list of vendor smart contract addresses
      */
-    function getRegisteredVendors() public view returns(address[] memory) {
+    function getVendors() public view returns(address[] memory) {
 
         uint len = vendorContractsList.length;
         address[] memory _contracts = new address[](len);
 
         for(uint i=0; i<len; i++) {
+            // Returns both registerd and not registered ones
             _contracts[i] = address(vendorContractsList[i]._contract);
         }
 
