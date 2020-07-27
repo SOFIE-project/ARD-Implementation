@@ -28,15 +28,15 @@ contract AuthorityContract is Ownable {
     event LogVulnerabilityDuplicate(
         bytes32 indexed vulnerabilityId,
         address indexed vendor,
-        bytes32 vendorId,
-        bytes32 productId,
+        uint32 vendorId,
+        uint32 productId,
         bytes32 vulnerabilityHash,
         VendorContract.State state
     );
 
     event LogVulnerabilityApproval(
         bytes32 indexed vulnerabilityId,
-        uint timelock,
+        uint32 timelock,
         VendorContract.State state
     );
 
@@ -45,7 +45,7 @@ contract AuthorityContract is Ownable {
         uint _timestamp,
         VendorContract.State _state,
         bytes32 _hashlock,
-        uint _timelock,
+        uint32 _timelock,
         uint _secret,
         VendorContract.RewardState,
         uint amount
@@ -53,8 +53,8 @@ contract AuthorityContract is Ownable {
 
     event LogMetadatabyID (
             address vendor,
-            bytes32 vendorId,
-            bytes32 productId,
+            uint32 vendorId,
+            uint32 productId,
             bytes32 vulnerabilityHash
         );
 
@@ -66,10 +66,10 @@ contract AuthorityContract is Ownable {
 
     // Modifiers
 
-    modifier futureTimelock(uint _time) {
+    modifier futureTimelock(uint32 _time) {
 
         // The timelock time is after the last blocktime (now).
-        require(_time > block.timestamp, "timelock time must be in the future");
+        require(_time > uint32(block.timestamp), "timelock time must be in the future");
         _;
     }
 
@@ -165,7 +165,7 @@ contract AuthorityContract is Ownable {
      * @return _vulnerabilityId Id of the new contract. This is needed for subsequent calls.
      */
     function registerVulnerability(address _vendor, bytes32 _hashlock,
-                                bytes32 _vendorId, bytes32 _productId,
+                                uint32 _vendorId, uint32 _productId,
                                 bytes32 _vulnerabilityHash)
         external
         returns (bytes32 _vulnerabilityId)
@@ -198,8 +198,8 @@ contract AuthorityContract is Ownable {
 
             // Retrive vulnerability metadata
             (address __vendor,
-            bytes32 __vendorId,
-            bytes32 __productId,
+            uint32 __vendorId,
+            uint32 __productId,
             ) = vendorContract.getVulnerabilityMetadata(_vulnerabilityId);
             (,,VendorContract.State _state,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
 
@@ -243,7 +243,7 @@ contract AuthorityContract is Ownable {
      * @param _vulnerabilityId The condract identifier.
      * @param _approved The approval parameter.
      */
-    function approve(uint _timelock, bytes32 _vulnerabilityId, bool _approved)
+    function approve(uint32 _timelock, bytes32 _vulnerabilityId, bool _approved)
         public
         onlyOwner()
         futureTimelock(_timelock)
@@ -353,7 +353,7 @@ contract AuthorityContract is Ownable {
         uint _timestamp,
         VendorContract.State _state,
         bytes32 _hashlock,
-        uint _timelock,
+        uint32 _timelock,
         uint _secret,
         string memory _location
         ) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
@@ -390,8 +390,8 @@ contract AuthorityContract is Ownable {
         //Retrivevulnerability metadata
 
         (address vendor,
-        bytes32 vendorId,
-        bytes32 productId,
+        uint32 vendorId,
+        uint32 productId,
         bytes32 vulnerabilityHash) = vendorContract.getVulnerabilityMetadata(_vulnerabilityId);
 
         emit LogMetadatabyID(vendor, vendorId, productId, vulnerabilityHash);

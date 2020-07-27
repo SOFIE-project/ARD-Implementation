@@ -72,22 +72,22 @@ contract VendorContract is Ownable {
     struct Metadata {
 
         address payable vendor;     // The address of the vendor
-        bytes32 vendorId;         // The Id of the vendor
-        bytes32 productId;          // The Id of the product (name and version)
+        uint32 vendorId;         // The Id of the vendor
+        uint32 productId;          // The Id of the product (name and version)
         bytes32 vulnerabilityHash;  // The hash of the vulnerability information
     }
 
     struct Vulnerability {
 
         address payable researcher; // Researcher address
-        uint timestamp;                 // The timestamp of the creation of the vulnerability
+        uint32 timestamp;                 // The timestamp of the creation of the vulnerability
+        uint32 timelock;                  // UNIX timestamp seconds - locked UNTIL this time //deadline
         State state;                  // The state of the vulnerability
-        bytes32 hashlock;               // Sha-2 sha256 the secret used as hashlock
-        uint timelock;                  // UNIX timestamp seconds - locked UNTIL this time //deadline
-        uint secret;                    // The secret
-        string vulnerabilityLocation;   // A pointer to a location with the vulnerability information
         Metadata metadata;              // Metadata info
         Reward reward;                  // The reward for this vulnerability
+        uint secret;                    // The secret
+        bytes32 hashlock;               // Sha-2 sha256 the secret used as hashlock
+        string vulnerabilityLocation;   // A pointer to a location with the vulnerability information
     }
 
     // Maps
@@ -112,8 +112,8 @@ contract VendorContract is Ownable {
         bytes32 vulnerabilityId,
         address payable _vendor,
         address payable _researcher,
-        bytes32 _vendorId,
-        bytes32 _productId,
+        uint32 _vendorId,
+        uint32 _productId,
         bytes32 _vulnerabilityHash,
         bytes32 _hashlock
         ) external onlyAuhtority {
@@ -130,7 +130,7 @@ contract VendorContract is Ownable {
         // Create new vulnerability entry
         Vulnerabilities[vulnerabilityId] = Vulnerability({
             researcher: _researcher,
-            timestamp: block.timestamp,
+            timestamp: uint32(block.timestamp),
             hashlock: _hashlock,
             timelock: 0,
             vulnerabilityLocation: "",
@@ -175,7 +175,7 @@ contract VendorContract is Ownable {
      * @param _timelock The new timelock of the vulnerability
      */
 
-    function setTimelock(bytes32 _vulnerabilityId,uint _timelock) external onlyAuhtority {
+    function setTimelock(bytes32 _vulnerabilityId, uint32 _timelock) external onlyAuhtority {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
 
@@ -267,7 +267,7 @@ contract VendorContract is Ownable {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
 
-        require(block.timestamp < v.timelock, "The timelock has expired");
+        require(uint32(block.timestamp) < v.timelock, "The timelock has expired");
         // require(msg.value == _bounty, "Value sent does not match the input bounty");
         require(balanceOwner > _bounty);
 
@@ -311,10 +311,10 @@ contract VendorContract is Ownable {
 
     function getVulnerabilityInfo (bytes32 _vulnerabilityId) external view returns(
         address ,
-        uint ,
+        uint32 ,
         State ,
         bytes32 ,
-        uint ,
+        uint32 ,
         uint ,
         string memory
         ) {
@@ -326,8 +326,8 @@ contract VendorContract is Ownable {
 
     function getVulnerabilityMetadata (bytes32 _vulnerabilityId) external view returns(
         address vendor,
-        bytes32 vendorId,
-        bytes32 productId,
+        uint32 vendorId,
+        uint32 productId,
         bytes32 vulnerabilityHash) {
 
         Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
