@@ -28,9 +28,8 @@ contract AuthorityContract is Ownable {
     event LogVulnerabilityDuplicate(
         bytes32 indexed vulnerabilityId,
         address indexed vendor,
-        bytes32 vendorName,
-        bytes32 productName,
-        bytes32 productVersion,
+        bytes32 vendorId,
+        bytes32 productId,
         bytes32 vulnerabilityHash,
         VendorContract.State state
     );
@@ -54,9 +53,8 @@ contract AuthorityContract is Ownable {
 
     event LogMetadatabyID (
             address vendor,
-            bytes32 vendorName,
-            bytes32 productName,
-            bytes32 productVersion,
+            bytes32 vendorId,
+            bytes32 productId,
             bytes32 vulnerabilityHash
         );
 
@@ -160,16 +158,15 @@ contract AuthorityContract is Ownable {
      *
      * @param _vendor The Vendor address, the owner of the vulnerable device
      * @param _hashlock The secret hash used also for the hashlock (sha-2 sha256).
-     * @param _vendorName The name of the vendor
-     * @param _productName The name of the product
-     * @param _productVersion The version of the product
+     * @param _vendorId The id of the vendor
+     * @param _productId The id of the product
      * @param _vulnerabilityHash The hash of the vulnerability data
      *
      * @return _vulnerabilityId Id of the new contract. This is needed for subsequent calls.
      */
     function registerVulnerability(address _vendor, bytes32 _hashlock,
-                                bytes32 _vendorName, bytes32 _productName,
-                                bytes32 _productVersion, bytes32 _vulnerabilityHash)
+                                bytes32 _vendorId, bytes32 _productId,
+                                bytes32 _vulnerabilityHash)
         external
         returns (bytes32 _vulnerabilityId)
     {
@@ -201,17 +198,15 @@ contract AuthorityContract is Ownable {
 
             // Retrive vulnerability metadata
             (address __vendor,
-            bytes32 __vendorName,
-            bytes32 __productName,
-            bytes32 __productVersion,
+            bytes32 __vendorId,
+            bytes32 __productId,
             ) = vendorContract.getVulnerabilityMetadata(_vulnerabilityId);
             (,,VendorContract.State _state,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
 
             emit LogVulnerabilityDuplicate(_vulnerabilityId,
                             __vendor,
-                            __vendorName,
-                            __productName,
-                            __productVersion,
+                            __vendorId,
+                            __productId,
                             _vulnerabilityHash,
                             _state
                             );
@@ -225,9 +220,8 @@ contract AuthorityContract is Ownable {
         vendorContract.newVulnerability(_vulnerabilityId,
                                         payable(_vendor),
                                         payable(msg.sender),
-                                        _vendorName,
-                                        _productName,
-                                        _productVersion,
+                                        _vendorId,
+                                        _productId,
                                         _vulnerabilityHash,
                                         _hashlock);
 
@@ -396,12 +390,11 @@ contract AuthorityContract is Ownable {
         //Retrivevulnerability metadata
 
         (address vendor,
-        bytes32 vendorName,
-        bytes32 productName,
-        bytes32 productVersion,
+        bytes32 vendorId,
+        bytes32 productId,
         bytes32 vulnerabilityHash) = vendorContract.getVulnerabilityMetadata(_vulnerabilityId);
 
-        emit LogMetadatabyID(vendor,vendorName,productName,productVersion,vulnerabilityHash);
+        emit LogMetadatabyID(vendor, vendorId, productId, vulnerabilityHash);
     }
 
     

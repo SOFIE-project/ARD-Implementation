@@ -72,9 +72,8 @@ contract VendorContract is Ownable {
     struct Metadata {
 
         address payable vendor;     // The address of the vendor
-        bytes32 vendorName;         // The name of the vendor
-        bytes32 productName;        // The name of the product
-        bytes32 productVersion;     // The version of the product
+        bytes32 vendorId;         // The Id of the vendor
+        bytes32 productId;          // The Id of the product (name and version)
         bytes32 vulnerabilityHash;  // The hash of the vulnerability information
     }
 
@@ -103,9 +102,8 @@ contract VendorContract is Ownable {
      * @param vulnerabilityId The identifier of the vulnerability
      * @param _vendor The Vendor address, the owner of the vulnerable device
      * @param _researcher The Resercher address
-     * @param _vendorName The name of the vendor
-     * @param _productName The name of the product
-     * @param _productVersion The version of the product
+     * @param _vendorId The id of the vendor
+     * @param _productId The id of the product
      * @param _vulnerabilityHash The hash of the vulnerability data
      * @param _hashlock The secret hash used also for the hashlock (sha-2 sha256).
      */
@@ -114,9 +112,8 @@ contract VendorContract is Ownable {
         bytes32 vulnerabilityId,
         address payable _vendor,
         address payable _researcher,
-        bytes32 _vendorName,
-        bytes32 _productName,
-        bytes32 _productVersion,
+        bytes32 _vendorId,
+        bytes32 _productId,
         bytes32 _vulnerabilityHash,
         bytes32 _hashlock
         ) external onlyAuhtority {
@@ -125,9 +122,8 @@ contract VendorContract is Ownable {
         Reward memory reward = Reward({amount: 0, state: RewardState.NULL});
         Metadata memory metadata = Metadata({
                                         vendor: _vendor,
-                                        vendorName: _vendorName,
-                                        productName: _productName,
-                                        productVersion: _productVersion,
+                                        vendorId: _vendorId,
+                                        productId: _productId,
                                         vulnerabilityHash: _vulnerabilityHash
                                     });
 
@@ -330,13 +326,12 @@ contract VendorContract is Ownable {
 
     function getVulnerabilityMetadata (bytes32 _vulnerabilityId) external view returns(
         address vendor,
-        bytes32 vendorName,
-        bytes32 productName,
-        bytes32 productVersion,
+        bytes32 vendorId,
+        bytes32 productId,
         bytes32 vulnerabilityHash) {
 
         Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
-        return(address(v.metadata.vendor), v.metadata.vendorName, v.metadata.productName, v.metadata.productVersion, v.metadata.vulnerabilityHash);
+        return(address(v.metadata.vendor), v.metadata.vendorId, v.metadata.productId, v.metadata.vulnerabilityHash);
     }
 
     function getVulnerabilityReward (bytes32 _vulnerabilityId) external view returns(RewardState _state, uint _amount){
@@ -356,12 +351,8 @@ contract VendorContract is Ownable {
         exists = (Vulnerabilities[_vulnerabilityId].researcher != address(0));
     }
 
-    // Fallback function to fund the contract
-    // TODO change to receive (compiler complains)
-    fallback() external payable onlyOwner {
-
-        // totBalance += msg.value;
+    // Receive function to fund the contract
+    receive() external payable onlyOwner {
         balanceOwner += msg.value;
-
     }
 }
