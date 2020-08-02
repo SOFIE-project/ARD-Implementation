@@ -1,6 +1,6 @@
 pragma solidity ^0.6.0;
 
-// import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
+//import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract VendorContract is Ownable {
@@ -16,6 +16,8 @@ contract VendorContract is Ownable {
     event LogVulnerabilityAcknowledgment(bytes32 indexed vulnerabilityId, address indexed vendor, uint bounty);
     event LogVulnerabilityPatch(bytes32 indexed vulnerabilityId, address indexed vendor);
     event LogBountyCanceled(bytes32 indexed vulnerabilityId, string reason);
+    event productRegistered(bytes32 indexed _productId);
+    event productUnregistered(bytes32 indexed _productId);
 
     // Modifiers
 
@@ -56,10 +58,17 @@ contract VendorContract is Ownable {
     // States
 
     enum State {Pending, Invalid, Valid, Acknowledged, Patched, Disclosed}
-    enum RewardState {NULL, SET, TOCLAIM, CANCELED, SENT}
+    enum RewardState {NULL, SET, CANCELED, SENT}
 
 
     // Structs
+
+    struct Product {
+        string productName;
+        uint32 registeredSince;
+        uint32 unregisteredSince;
+        bool registered;
+    }
 
     struct Reward {
 
@@ -67,14 +76,9 @@ contract VendorContract is Ownable {
         uint amount;
     }
 
-    // TODO remove vendor address and vendorID from this struct
-        // vendor address is the owner of Ownable
-        // TODO decide if we need to keep vendorId
-    struct Metadata {
-
-        address payable vendor;     // The address of the vendor
+        struct Metadata {
         uint32 vendorId;         // The Id of the vendor
-        uint32 productId;          // The Id of the product (name and version)
+        bytes32 productId;          // The Id of the product (name and version)
         bytes32 vulnerabilityHash;  // The hash of the vulnerability information
     }
 
@@ -93,7 +97,11 @@ contract VendorContract is Ownable {
 
     // Maps
 
-    mapping  (bytes32 => Vulnerability) Vulnerabilities; //mapping _vulnerability_id => _vulnerability;
+    mapping (bytes32 => Vulnerability) Vulnerabilities; //mapping _vulnerability_id => _vulnerability;
+    mapping (bytes32=> Product) public Products;// mapping productId => Product
+    bytes32[] public productIdx; // a list of vendor's product by product id
+
+
 
     // External methods (callable only by Authority contract)
 
@@ -101,7 +109,6 @@ contract VendorContract is Ownable {
      * @dev The function is called by the vulnerability authority to set up a new vulnerability contract.
      *
      * @param vulnerabilityId The identifier of the vulnerability
-     * @param _vendor The Vendor address, the owner of the vulnerable device
      * @param _researcher The Resercher address
      * @param _vendorId The id of the vendor
      * @param _productId The id of the product
@@ -111,10 +118,9 @@ contract VendorContract is Ownable {
 
     function newVulnerability (
         bytes32 vulnerabilityId,
-        address payable _vendor,
         address payable _researcher,
         uint32 _vendorId,
-        uint32 _productId,
+        bytes32 _productId,
         bytes32 _vulnerabilityHash,
         bytes32 _hashlock
         ) external onlyAuhtority {
@@ -122,7 +128,6 @@ contract VendorContract is Ownable {
         // Store the new vulnerability entry
         Reward memory reward = Reward({amount: 0, state: RewardState.NULL});
         Metadata memory metadata = Metadata({
-                                        vendor: _vendor,
                                         vendorId: _vendorId,
                                         productId: _productId,
                                         vulnerabilityHash: _vulnerabilityHash
@@ -219,7 +224,7 @@ contract VendorContract is Ownable {
      * @param reason The reason why vulnerability has been deleted
      */
 
-    // TODO make this function a cooperation between Authority and Vendor ?
+
     function cancelBounty(bytes32 _vulnerabilityId, string calldata reason) external onlyAuhtority {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
@@ -251,8 +256,57 @@ contract VendorContract is Ownable {
 
     // Public methods callable only by the Owner (the vendor)
 
+    /**
+     * @dev The Vendor registers a product
+     *
+     * @param _productName The product name
+     */
+
+     function registerProduct(string memory _productName) onlyOwner internal {
+
+         bytes32 _productId = keccak256(
+            abi.encodePacked(
+            owner(),
+            _productName
+            )
+        );
+
+        require(!productExist(_productId),"This product already exist");
+
+        Product memory newProduct = Product({productName:_productName,
+                                                  registeredSince:uint32(block.timestamp),
+                                                  unregisteredSince:0,
+                                                  registered:true
+                                                });
+
+        Products[_productId] = newProduct;     // Store in the map the new pair (_productId, newProduct)
+        productIdx.push(_productId);   // Store vendor address in array
+
+        emit productRegistered(_productId);
+    }
+
+    /**
+     * @dev The Vendor unregisters a product
+     *
+     * @param _productId The product identifier
+     */
+
+    function unregisterProduct(bytes32 _productId) onlyOwner external {
+
+        require(productIsRegistered(_productId),"This vendor is already unregistered");
+
+        // Deactivate product
+        Product storage p = Products[_productId];
+        p.registered=false;
+        p.unregisteredSince = uint32(block.timestamp);
+
+        emit productUnregistered(_productId);
+    }
+
+
+
      /**
-    * @dev The vendor acknowledges the vulnerability and set the ETH as a reward for the researcher.
+     * @dev The vendor acknowledges the vulnerability and set the ETH as a reward for the researcher.
      *
      * @param _vulnerabilityId The condract identifier.
      * @param _bounty The bounty in ETH.
@@ -309,6 +363,38 @@ contract VendorContract is Ownable {
     }
 
 
+    // Getter and Utility
+
+    function getProductyIdx(uint idx) public view returns(
+        string memory productName,
+        uint32 registeredSince,
+        uint32 unregisteredSince,
+        bool registered){
+
+        require(idx<productIdx.length, "Out of range");
+        bytes32 productId=productIdx[idx];
+        Product memory p= Products[productId];
+        return (p.productName,p.registeredSince,p.unregisteredSince,p.registered);
+     }
+
+      function productExist(bytes32 _productId)
+        internal
+        view
+        returns (bool exists)
+    {
+        string memory pname=Products[_productId].productName;
+        exists=( bytes(pname).length != 0);
+    }
+
+    function productIsRegistered(bytes32 _productId)
+        internal
+        view
+        returns (bool registered)
+    {
+        require(productExist(_productId),"This vendor doesn't exist");
+        registered=Products[_productId].registered;
+    }
+
 
     function getVulnerabilityInfo (bytes32 _vulnerabilityId) external view returns(
         address ,
@@ -326,13 +412,12 @@ contract VendorContract is Ownable {
 
 
     function getVulnerabilityMetadata (bytes32 _vulnerabilityId) external view returns(
-        address vendor,
         uint32 vendorId,
-        uint32 productId,
+        bytes32 productId,
         bytes32 vulnerabilityHash) {
 
         Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
-        return(address(v.metadata.vendor), v.metadata.vendorId, v.metadata.productId, v.metadata.vulnerabilityHash);
+        return(v.metadata.vendorId, v.metadata.productId, v.metadata.vulnerabilityHash);
     }
 
     function getVulnerabilityReward (bytes32 _vulnerabilityId) external view returns(RewardState _state, uint _amount){
