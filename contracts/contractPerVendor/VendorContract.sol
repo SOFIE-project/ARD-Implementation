@@ -15,7 +15,7 @@ contract VendorContract is Ownable {
 
     event LogVulnerabilityAcknowledgment(bytes32 indexed vulnerabilityId, address indexed vendor, uint bounty);
     event LogVulnerabilityPatch(bytes32 indexed vulnerabilityId, address indexed vendor);
-    event LogBountyCanceled(bytes32 indexed vulnerabilityId, string reason);
+    event LogBountyCanceled(bytes32 indexed vulnerabilityId, string motivation);
     event productRegistered(bytes32 indexed _productId);
     event productUnregistered(bytes32 indexed _productId);
 
@@ -49,7 +49,6 @@ contract VendorContract is Ownable {
 
     // State variables
 
-    // uint totBalance;
     uint balanceOwner;              // This variable stores the amount the contract has "free" to pay for the bounties.
                                     // A new bounty decreases this amount; funding the contract or cancelling a bounty increase it
     address vulnerabilityAuthority;
@@ -57,17 +56,17 @@ contract VendorContract is Ownable {
 
     // States
 
-    enum State {Pending, Invalid, Valid, Acknowledged, Patched, Disclosed}
+    enum State {Pending, Invalid, Valid, Acknowledged, Patched, Disclosable, Disclosed}
     enum RewardState {NULL, SET, CANCELED, SENT}
 
 
     // Structs
 
     struct Product {
-        string productName;
         uint32 registeredSince;
         uint32 unregisteredSince;
         bool registered;
+        string productName;
     }
 
     struct Reward {
@@ -76,8 +75,9 @@ contract VendorContract is Ownable {
         uint amount;
     }
 
-        struct Metadata {
-        uint32 vendorId;         // The Id of the vendor
+    // Extra data to track 
+    struct Metadata {
+        uint32 timestamp;                 // The timestamp of the creation of the vulnerability
         bytes32 productId;          // The Id of the product (name and version)
         bytes32 vulnerabilityHash;  // The hash of the vulnerability information
     }
@@ -85,11 +85,10 @@ contract VendorContract is Ownable {
     struct Vulnerability {
 
         address payable researcher; // Researcher address
-        uint32 timestamp;                 // The timestamp of the creation of the vulnerability
         uint32 timelock;                  // UNIX timestamp seconds - locked UNTIL this time //deadline
         State state;                  // The state of the vulnerability
-        Metadata metadata;              // Metadata info
         Reward reward;                  // The reward for this vulnerability
+        Metadata metadata;              // Metadata info
         uint secret;                    // The secret
         bytes32 hashlock;               // Sha-2 sha256 the secret used as hashlock
         string vulnerabilityLocation;   // A pointer to a location with the vulnerability information
@@ -110,7 +109,6 @@ contract VendorContract is Ownable {
      *
      * @param vulnerabilityId The identifier of the vulnerability
      * @param _researcher The Resercher address
-     * @param _vendorId The id of the vendor
      * @param _productId The id of the product
      * @param _vulnerabilityHash The hash of the vulnerability data
      * @param _hashlock The secret hash used also for the hashlock (sha-2 sha256).
@@ -119,7 +117,6 @@ contract VendorContract is Ownable {
     function newVulnerability (
         bytes32 vulnerabilityId,
         address payable _researcher,
-        uint32 _vendorId,
         bytes32 _productId,
         bytes32 _vulnerabilityHash,
         bytes32 _hashlock
@@ -128,7 +125,7 @@ contract VendorContract is Ownable {
         // Store the new vulnerability entry
         Reward memory reward = Reward({amount: 0, state: RewardState.NULL});
         Metadata memory metadata = Metadata({
-                                        vendorId: _vendorId,
+                                        timestamp: uint32(block.timestamp),
                                         productId: _productId,
                                         vulnerabilityHash: _vulnerabilityHash
                                     });
@@ -136,7 +133,6 @@ contract VendorContract is Ownable {
         // Create new vulnerability entry
         Vulnerabilities[vulnerabilityId] = Vulnerability({
             researcher: _researcher,
-            timestamp: uint32(block.timestamp),
             hashlock: _hashlock,
             timelock: 0,
             vulnerabilityLocation: "",
@@ -218,23 +214,23 @@ contract VendorContract is Ownable {
     }
 
     /**
-     * @dev The authority cacel the vulnerability bounty (e.g the researcher cheated)
+     * @dev The authority cancels the vulnerability bounty (e.g the researcher cheated)
      *
      * @param _vulnerabilityId The identifier of the vulnerability
-     * @param reason The reason why vulnerability has been deleted
+     * @param _motivation The motivation why vulnerability has been deleted
      */
-
-
-    function cancelBounty(bytes32 _vulnerabilityId, string calldata reason) external onlyAuhtority {
+    function cancelBounty(bytes32 _vulnerabilityId, string calldata _motivation) external onlyAuhtority {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
+
+        require(v.reward.state == RewardState.SET, "A bounty has to be SET to be canceled");
 
         uint amount = v.reward.amount;
         v.reward.state = RewardState.CANCELED;
         v.reward.amount = 0;
         balanceOwner += amount;
 
-        emit LogBountyCanceled(_vulnerabilityId, reason);
+        emit LogBountyCanceled(_vulnerabilityId, _motivation);
     }
 
      /**
@@ -398,7 +394,6 @@ contract VendorContract is Ownable {
 
     function getVulnerabilityInfo (bytes32 _vulnerabilityId) external view returns(
         address ,
-        uint32 ,
         State ,
         bytes32 ,
         uint32 ,
@@ -407,17 +402,17 @@ contract VendorContract is Ownable {
         ) {
 
         Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
-        return(address(v.researcher), v.timestamp, v.state, v.hashlock, v.timelock, v.secret, v.vulnerabilityLocation);
+        return(address(v.researcher), v.state, v.hashlock, v.timelock, v.secret, v.vulnerabilityLocation);
     }
 
 
     function getVulnerabilityMetadata (bytes32 _vulnerabilityId) external view returns(
-        uint32 vendorId,
+        uint32 timestamp,
         bytes32 productId,
         bytes32 vulnerabilityHash) {
 
         Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
-        return(v.metadata.vendorId, v.metadata.productId, v.metadata.vulnerabilityHash);
+        return(v.metadata.timestamp, v.metadata.productId, v.metadata.vulnerabilityHash);
     }
 
     function getVulnerabilityReward (bytes32 _vulnerabilityId) external view returns(RewardState _state, uint _amount){
