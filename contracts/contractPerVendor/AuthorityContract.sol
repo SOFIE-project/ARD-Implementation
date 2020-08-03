@@ -34,7 +34,7 @@ contract AuthorityContract is Ownable {
     event LogVulnerabilityDuplicate(
         bytes32 indexed vulnerabilityId,
         address indexed vendor,
-        uint32 vendorId,
+        uint32 timestamp,
         bytes32 productId,
         bytes32 vulnerabilityHash,
         VendorContract.State state
@@ -46,25 +46,25 @@ contract AuthorityContract is Ownable {
         VendorContract.State state
     );
 
-    event LogVulnerabilitybyID(
-        address _researcher,
-        uint _timestamp,
-        VendorContract.State _state,
-        bytes32 indexed _hashlock,
-        uint32 _timelock,
-        uint _secret,
-        VendorContract.RewardState,
-        uint amount
-    );
+    // event LogVulnerabilitybyID(
+    //     address _researcher,
+    //     uint _timestamp,
+    //     VendorContract.State _state,
+    //     bytes32 indexed _hashlock,
+    //     uint32 _timelock,
+    //     uint _secret,
+    //     VendorContract.RewardState,
+    //     uint amount
+    // );
 
-    event LogMetadatabyID (
-            address vendor,
-            uint32 vendorId,
-            bytes32 indexed productId,
-            bytes32 indexed vulnerabilityHash
-        );
+    // event LogMetadatabyID (
+    //         address vendor,
+    //         bytes32 indexed productId,
+    //         bytes32 indexed vulnerabilityHash
+    //     );
 
-    event LogVulnerabilityNotFound(bytes32 indexed vulnerabilityId);
+    // event LogVulnerabilityNotFound(bytes32 indexed vulnerabilityId);
+    
     event LogVulnerabilitySecret(bytes32 indexed vulnerabilityId, uint secret);
     event LogVulnerabilityDisclose(bytes32 indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation);
     event vendorRegistered(address indexed _vendor);
@@ -95,7 +95,7 @@ contract AuthorityContract is Ownable {
 
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
-        (,,,bytes32 _hashlock,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        (,,bytes32 _hashlock,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
         require(_hashlock == keccak256(abi.encodePacked(_secret)),"Hashed secret and hashlock do not match");
         _;
     }
@@ -132,7 +132,11 @@ contract AuthorityContract is Ownable {
 
     // Methods
 
-    ///Manage Vendor
+    /**
+
+        Vendor's related methods
+    
+     */
 
     /**
      * @dev The Authority register a Vendor
@@ -216,14 +220,18 @@ contract AuthorityContract is Ownable {
 
     }
 
-    /// Manage vulnerability
+
+    /**
+    
+        ARD process methods
+
+     */
 
     /**
      * @dev The resercher sets up a new vulnerability contract.
      *
      * @param _vendor The Vendor address, the owner of the vulnerable device
      * @param _hashlock The secret hash used also for the hashlock (sha-2 sha256).
-     * @param _vendorId The id of the vendor
      * @param _productId The id of the product
      * @param _vulnerabilityHash The hash of the vulnerability data
      *
@@ -232,8 +240,7 @@ contract AuthorityContract is Ownable {
 
 
     function registerVulnerability(address _vendor, bytes32 _hashlock,
-                                uint32 _vendorId, bytes32 _productId,
-                                bytes32 _vulnerabilityHash)
+                                bytes32 _productId, bytes32 _vulnerabilityHash)
         external
         returns (bytes32 _vulnerabilityId){
 
@@ -265,14 +272,14 @@ contract AuthorityContract is Ownable {
             _vulnerabilityId = HashData[_vulnerabilityHash];
 
             // Retrive vulnerability metadata
-            (uint32 __vendorId,
+            (uint32 __timestamp,
              bytes32 __productId,
             ) = vendorContract.getVulnerabilityMetadata(_vulnerabilityId);
-            (,,VendorContract.State _state,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+            (,VendorContract.State _state,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
 
             emit LogVulnerabilityDuplicate(_vulnerabilityId,
                             _vendor,
-                            __vendorId,
+                            __timestamp,
                             __productId,
                             _vulnerabilityHash,
                             _state
@@ -284,7 +291,6 @@ contract AuthorityContract is Ownable {
         // Associate the contract with the vulnerability metadata
         vendorContract.newVulnerability(_vulnerabilityId,
                                         payable(msg.sender),
-                                        _vendorId,
                                         _productId,
                                         _vulnerabilityHash,
                                         _hashlock);
@@ -362,12 +368,12 @@ contract AuthorityContract is Ownable {
         //Retrive rewardState
         (VendorContract.RewardState _rewardState, uint _amount) = vendorContract.getVulnerabilityReward(_vulnerabilityId);
 
-        //set secret
+        //Set secret and state
         vendorContract.setSecret(_vulnerabilityId, _secret);
+        vendorContract.setState(_vulnerabilityId, VendorContract.State.Disclosable);
 
-        (address _researcher,,,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
         require(_rewardState == VendorContract.RewardState.SET && _amount > 0, "Cannot claim reward");
-        require(msg.sender == _researcher, "Only the original researcher can withdraw the reward");
+
         vendorContract.payBounty(_vulnerabilityId);
 
         emit LogVulnerabilitySecret(_vulnerabilityId, _secret);
@@ -384,7 +390,6 @@ contract AuthorityContract is Ownable {
     function disclose(bytes32 _vulnerabilityId, string calldata _vulnerabilityLocation)
         external
         vulnerabilityExists(_vulnerabilityId)
-        disclosable(_vulnerabilityId)
         onlyInterledger
         returns (bool success){
 
@@ -393,10 +398,10 @@ contract AuthorityContract is Ownable {
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
         //Retrive rewardState
-        (,,,,,uint secret,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        (,VendorContract.State state,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
 
         //verify secret has been published
-        require(secret!=0);
+        require(state == VendorContract.State.Disclosable);
 
         vendorContract.setState(_vulnerabilityId, VendorContract.State.Disclosed);
         vendorContract.setLocation(_vulnerabilityId, _vulnerabilityLocation);
@@ -409,6 +414,35 @@ contract AuthorityContract is Ownable {
 
 
     /**
+
+        Cancel bounty
+
+     */
+
+
+    /**
+     * @dev Cancels the vulnerability bounty
+     *
+     * @param _vulnerabilityId The identifier of the vulnerability
+     * @param _motivation The motivation why vulnerability has been deleted
+     */
+    function cancelBounty(bytes32 _vulnerabilityId, string calldata _motivation) external onlyOwner {
+
+        address _vendor = VendorVulnerabilities[_vulnerabilityId];
+        VendorContract vendorContract = vendorRecords[_vendor]._contract;
+
+        vendorContract.cancelBounty(_vulnerabilityId, _motivation);
+    }
+
+
+
+    /**
+
+        GETTERS
+
+     */
+
+    /**
      * @notice Get contract details.
      * @dev Need to split in two functions to avoid stack too deep exc
      * @param _vulnerabilityId contract id
@@ -419,7 +453,6 @@ contract AuthorityContract is Ownable {
         public
         returns(
         address _researcher,
-        uint _timestamp,
         VendorContract.State _state,
         bytes32 _hashlock,
         uint32 _timelock,
@@ -432,7 +465,6 @@ contract AuthorityContract is Ownable {
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
         return vendorContract.getVulnerabilityInfo(_vulnerabilityId);
-
     }
 
      /**
@@ -464,22 +496,25 @@ contract AuthorityContract is Ownable {
      * @param _vulnerabilityId Id into Vulnerabilities mapping.
      */
     function getMetadataById(bytes32 _vulnerabilityId)
-        public{
+        public
+        view
+        returns(
+            uint32 timestamp,
+            bytes32 productId,
+            bytes32 vulnerabilityHash
+        ) {
 
         if (haveVulnerability(_vulnerabilityId) == false){
-            emit LogVulnerabilityNotFound(_vulnerabilityId);
-            return;
+            return (0, 0x0, 0x0);
         }
 
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        //Retrivevulnerability metadata
-        (uint32 vendorId,
-         bytes32 productId,
-         bytes32 vulnerabilityHash) = vendorContract.getVulnerabilityMetadata(_vulnerabilityId);
-
-        emit LogMetadatabyID(_vendor, vendorId, productId, vulnerabilityHash);
+        // Retrivevulnerability metadata
+        (timestamp,
+         productId,
+         vulnerabilityHash) = vendorContract.getVulnerabilityMetadata(_vulnerabilityId);
     }
 
 
@@ -495,7 +530,7 @@ contract AuthorityContract is Ownable {
     }
 
     /**
-     * @dev Is there a contract with meta _meta.
+     * @dev Is there a contract with hash data _hashdata.
      * @param _hashData the hash of the vulnerability data
      */
     function haveHashData(bytes32 _hashData)
@@ -515,7 +550,7 @@ contract AuthorityContract is Ownable {
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        (,,VendorContract.State _state,,uint _timlock,,)=vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        (,VendorContract.State _state,,uint _timlock,,)=vendorContract.getVulnerabilityInfo(_vulnerabilityId);
         return  ((_state == VendorContract.State.Valid || _state == VendorContract.State.Acknowledged) && _timlock < block.timestamp) ||
                 (_state == VendorContract.State.Patched);
     }
