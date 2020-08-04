@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract VendorContract is Ownable {
 
-    constructor(address payable _vendor) public {
+    constructor(address _vendor, address authority) public {
 
-        vulnerabilityAuthority = msg.sender;
+        vulnerabilityAuthority = authority;
         transferOwnership(_vendor); // Otherwise the owner is the Authority contract
     }
 
