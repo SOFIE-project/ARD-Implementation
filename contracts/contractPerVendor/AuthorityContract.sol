@@ -4,6 +4,7 @@ pragma solidity ^0.6.0;
  //import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
 
 import "./VendorContract.sol";
+import "./VendorFactory.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
@@ -15,10 +16,13 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract AuthorityContract is Ownable {
 
-    constructor(address _interledger) public {
-        //add interledger account
-        interledger = _interledger;
+    address public interledger;
+    VendorFactory public factory;
 
+    constructor(address _interledger, VendorFactory _factory) public {
+
+        interledger = _interledger;
+        factory = _factory;
     }
 
     // Logs
@@ -107,7 +111,6 @@ contract AuthorityContract is Ownable {
         _;
     }
 
-    address interledger;
 
     //Struct
 
@@ -148,7 +151,8 @@ contract AuthorityContract is Ownable {
 
         require(!vendorExist(_vendor),"This vendor already exist");
 
-        VendorContract contractVendorAddress = new VendorContract(payable(_vendor));
+        // VendorContract contractVendorAddress = new VendorContract(payable(_vendor));
+        VendorContract contractVendorAddress = factory.createVendorContract(_vendor);
         VendorRecord memory record = VendorRecord({_contract: contractVendorAddress,
                                                     registeredSince: uint32(block.timestamp),
                                                     unregisteredSince: 0,
@@ -176,9 +180,7 @@ contract AuthorityContract is Ownable {
         VendorRecord storage record = vendorRecords[_vendor];
         record.registered=false;
         record.unregisteredSince = uint32(block.timestamp);
-        // vendorContracts[_vendor]._contract = VendorContract(address(0));
         emit vendorUnregistered(_vendor);
-
     }
 
    /**
@@ -201,7 +203,7 @@ contract AuthorityContract is Ownable {
      }
 
 
-      function vendorExist(address _vendor)
+    function vendorExist(address _vendor)
         internal
         view
         returns (bool exists){
@@ -267,7 +269,7 @@ contract AuthorityContract is Ownable {
             revert("Vulnerability already exists");
 
         // If the submission contains already the same vulnerability information hash, fire event and return the currently stored contract
-        if (haveHashData(_vulnerabilityHash)) {
+        if (HashData[_vulnerabilityHash] != 0x0) {
 
             _vulnerabilityId = HashData[_vulnerabilityHash];
 
@@ -442,80 +444,80 @@ contract AuthorityContract is Ownable {
 
      */
 
-    /**
-     * @notice Get contract details.
-     * @dev Need to split in two functions to avoid stack too deep exc
-     * @param _vulnerabilityId contract id
-     */
-    function getVulnerabilityInfoById(bytes32 _vulnerabilityId)
-        vulnerabilityExists(_vulnerabilityId)
-        view
-        public
-        returns(
-        address _researcher,
-        VendorContract.State _state,
-        bytes32 _hashlock,
-        uint32 _timelock,
-        uint _secret,
-        string memory _location
-        ){
+    // /**
+    //  * @notice Get contract details.
+    //  * @dev Need to split in two functions to avoid stack too deep exc
+    //  * @param _vulnerabilityId contract id
+    //  */
+    // function getVulnerabilityInfoById(bytes32 _vulnerabilityId)
+    //     vulnerabilityExists(_vulnerabilityId)
+    //     view
+    //     public
+    //     returns(
+    //     address _researcher,
+    //     VendorContract.State _state,
+    //     bytes32 _hashlock,
+    //     uint32 _timelock,
+    //     uint _secret,
+    //     string memory _location
+    //     ){
 
-        // Retrive VendorContract
-        address _vendor = VendorVulnerabilities[_vulnerabilityId];
-        VendorContract vendorContract = vendorRecords[_vendor]._contract;
+    //     // Retrive VendorContract
+    //     address _vendor = VendorVulnerabilities[_vulnerabilityId];
+    //     VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        return vendorContract.getVulnerabilityInfo(_vulnerabilityId);
-    }
+    //     return vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+    // }
 
-     /**
-     * @notice Get contract details.
-     * @dev Need to split in two functions to avoid stack too deep exc
-     * @param _vulnerabilityId contract id
-     */
-    function getVulnerabilityRewardInfoById(bytes32 _vulnerabilityId)
-        vulnerabilityExists(_vulnerabilityId)
-        view
-        public
-        returns(
-        VendorContract.RewardState _rewState,
-        uint _amount
-        ){
+    //  /**
+    //  * @notice Get contract details.
+    //  * @dev Need to split in two functions to avoid stack too deep exc
+    //  * @param _vulnerabilityId contract id
+    //  */
+    // function getVulnerabilityRewardInfoById(bytes32 _vulnerabilityId)
+    //     vulnerabilityExists(_vulnerabilityId)
+    //     view
+    //     public
+    //     returns(
+    //     VendorContract.RewardState _rewState,
+    //     uint _amount
+    //     ){
 
-        // Retrive VendorContract
-        address _vendor = VendorVulnerabilities[_vulnerabilityId];
-        VendorContract vendorContract = vendorRecords[_vendor]._contract;
+    //     // Retrive VendorContract
+    //     address _vendor = VendorVulnerabilities[_vulnerabilityId];
+    //     VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        // Retrive vulnerability RewardState
-        return vendorContract.getVulnerabilityReward(_vulnerabilityId);
+    //     // Retrive vulnerability RewardState
+    //     return vendorContract.getVulnerabilityReward(_vulnerabilityId);
 
-    }
+    // }
 
-    /**
-     * @notice Get the metadata of a vulnerability
-     * @dev Need to split in two functions to avoid stack too deep exc
-     * @param _vulnerabilityId Id into Vulnerabilities mapping.
-     */
-    function getMetadataById(bytes32 _vulnerabilityId)
-        public
-        view
-        returns(
-            uint32 timestamp,
-            bytes32 productId,
-            bytes32 vulnerabilityHash
-        ) {
+    // /**
+    //  * @notice Get the metadata of a vulnerability
+    //  * @dev Need to split in two functions to avoid stack too deep exc
+    //  * @param _vulnerabilityId Id into Vulnerabilities mapping.
+    //  */
+    // function getMetadataById(bytes32 _vulnerabilityId)
+    //     public
+    //     view
+    //     returns(
+    //         uint32 timestamp,
+    //         bytes32 productId,
+    //         bytes32 vulnerabilityHash
+    //     ) {
 
-        if (haveVulnerability(_vulnerabilityId) == false){
-            return (0, 0x0, 0x0);
-        }
+    //     if (haveVulnerability(_vulnerabilityId) == false){
+    //         return (0, 0x0, 0x0);
+    //     }
 
-        address _vendor = VendorVulnerabilities[_vulnerabilityId];
-        VendorContract vendorContract = vendorRecords[_vendor]._contract;
+    //     address _vendor = VendorVulnerabilities[_vulnerabilityId];
+    //     VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        // Retrivevulnerability metadata
-        (timestamp,
-         productId,
-         vulnerabilityHash) = vendorContract.getVulnerabilityMetadata(_vulnerabilityId);
-    }
+    //     // Retrivevulnerability metadata
+    //     (timestamp,
+    //      productId,
+    //      vulnerabilityHash) = vendorContract.getVulnerabilityMetadata(_vulnerabilityId);
+    // }
 
 
     /**
@@ -529,17 +531,17 @@ contract AuthorityContract is Ownable {
         exists = (address(VendorVulnerabilities[_vulnerabilityId]) != address(0));
     }
 
-    /**
-     * @dev Is there a contract with hash data _hashdata.
-     * @param _hashData the hash of the vulnerability data
-     */
-    function haveHashData(bytes32 _hashData)
-        internal
-        view
-        returns (bool exists){
+    // /**
+    //  * @dev Is there a contract with hash data _hashdata.
+    //  * @param _hashData the hash of the vulnerability data
+    //  */
+    // function haveHashData(bytes32 _hashData)
+    //     internal
+    //     view
+    //     returns (bool exists){
 
-        exists = (HashData[_hashData] != 0x0);
-    }
+    //     exists = (HashData[_hashData] != 0x0);
+    // }
 
     /**
      * @dev Is the input contract disclosable
