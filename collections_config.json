@@ -1,25 +1,65 @@
+ 
 [
   {
-       "name": "collectionVulnerability",
-       "policy": "OR('Org1MSP.member', 'Org2MSP.member')",
-       "requiredPeerCount": 0,
-       "maxPeerCount": 3,
-       "blockToLive":0,
-       "memberOnlyRead": false,
-       "membersOnlyWrite": true
+    "name": "collectionVulnerability",
+    "policy": {
+      "identities": [
+        {
+          "role": {
+            "name": "member",
+            "mspId": "authoritymsp"
+          }
+        },
+        {
+          "role": {
+            "name": "member",
+            "mspId": "vendormsp"
+          }
+        }
+        
+      ],
+      "policy": {
+        "1-of": [
+          {
+            "signed-by": 0
+          },
+          {
+            "signed-by": 1
+          }
+          
+        ]
+      }
+    },
+    "requiredPeerCount": 0,
+    "maxPeerCount": 3,
+    "blockToLive": 0,
+    "memberOnlyRead": false,
+    "membersOnlyWrite": true//only vendor and authority can write data
   },
-
   {
-       "name": "collectionVulnerabilityPrivateDetails",
-       "policy": "OR('Org1MSP.member')",
-       "requiredPeerCount": 0,
-       "maxPeerCount": 2,
-       "blockToLive":0,
-       "membersOnlyRead":true,
-       "membersOnlyWrite":true,
-       "endorsementPolicy": {
-        "signaturePolicy": "OR('Org1MSP.member')"
-    }
+    "name": "collectionVulnerabilityPrivateDetails",
+    "policy": {
+      "identities": [
+        {
+          "role": {
+            "name": "member",
+            "mspId": "authoritymsp"
+          }
+        }
+      ],
+      "policy": {
+        "1-of": [
+          {
+            "signed-by": 0
+          }
+        ]
+      }
+    },
+    "requiredPeerCount": 0,
+    "maxPeerCount": 2,
+    "blockToLive": 0,
+    "memberOnlyRead": false,
+    "membersOnlyWrite": true//only authority can write data
   }
 ]
 
