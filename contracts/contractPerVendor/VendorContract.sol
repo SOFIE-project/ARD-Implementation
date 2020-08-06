@@ -5,9 +5,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract VendorContract is Ownable {
 
-    constructor(address _vendor, address authority) public {
+    constructor(address _vendor, address _authority) public {
 
-        vulnerabilityAuthority = authority;
+        authority = _authority;
         transferOwnership(_vendor); // Otherwise the owner is the Authority contract
     }
 
@@ -16,14 +16,14 @@ contract VendorContract is Ownable {
     event LogVulnerabilityAcknowledgment(bytes32 indexed vulnerabilityId, address indexed vendor, uint bounty);
     event LogVulnerabilityPatch(bytes32 indexed vulnerabilityId, address indexed vendor);
     event LogBountyCanceled(bytes32 indexed vulnerabilityId, string motivation);
-    event productRegistered(bytes32 indexed _productId);
-    event productUnregistered(bytes32 indexed _productId);
+    event ProductRegistered(bytes32 indexed _productId);
+    event ProductUnregistered(bytes32 indexed _productId);
 
     // Modifiers
 
     modifier onlyAuhtority {
 
-        require(msg.sender == vulnerabilityAuthority);
+        require(msg.sender == authority);
         _;
     }
 
@@ -51,7 +51,7 @@ contract VendorContract is Ownable {
 
     uint balanceOwner;              // This variable stores the amount the contract has "free" to pay for the bounties.
                                     // A new bounty decreases this amount; funding the contract or cancelling a bounty increase it
-    address vulnerabilityAuthority;
+    address authority;
 
 
     // States
@@ -121,6 +121,8 @@ contract VendorContract is Ownable {
         bytes32 _vulnerabilityHash,
         bytes32 _hashlock
         ) external onlyAuhtority {
+
+        require(productExist(_productId), "Product Id not registered");
 
         // Store the new vulnerability entry
         Reward memory reward = Reward({amount: 0, state: RewardState.NULL});
@@ -258,7 +260,7 @@ contract VendorContract is Ownable {
      * @param _productName The product name
      */
 
-     function registerProduct(string memory _productName) onlyOwner internal {
+     function registerProduct(string calldata _productName) onlyOwner external {
 
          bytes32 _productId = keccak256(
             abi.encodePacked(
@@ -278,7 +280,7 @@ contract VendorContract is Ownable {
         Products[_productId] = newProduct;     // Store in the map the new pair (_productId, newProduct)
         productIdx.push(_productId);   // Store vendor address in array
 
-        emit productRegistered(_productId);
+        emit ProductRegistered(_productId);
     }
 
     /**
@@ -296,7 +298,7 @@ contract VendorContract is Ownable {
         p.registered=false;
         p.unregisteredSince = uint32(block.timestamp);
 
-        emit productUnregistered(_productId);
+        emit ProductUnregistered(_productId);
     }
 
 
