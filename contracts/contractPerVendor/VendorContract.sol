@@ -49,9 +49,9 @@ contract VendorContract is Ownable {
 
     // State variables
 
-    uint balanceOwner;              // This variable stores the amount the contract has "free" to pay for the bounties.
+    uint public balanceOwner;       // This variable stores the amount the contract has "free" to pay for the bounties.
                                     // A new bounty decreases this amount; funding the contract or cancelling a bounty increase it
-    address authority;
+    address public authority;
 
 
     // States
@@ -291,7 +291,7 @@ contract VendorContract is Ownable {
 
     function unregisterProduct(bytes32 _productId) onlyOwner external {
 
-        require(productIsRegistered(_productId),"This vendor is already unregistered");
+        require(productIsRegistered(_productId));
 
         // Deactivate product
         Product storage p = Products[_productId];
@@ -371,7 +371,17 @@ contract VendorContract is Ownable {
 
         require(idx<productIdx.length, "Out of range");
         bytes32 productId=productIdx[idx];
-        Product memory p= Products[productId];
+        Product memory p = Products[productId];
+        return (p.productName,p.registeredSince,p.unregisteredSince,p.registered);
+     }
+
+    function getProductById(bytes32 _productId) public view returns(
+        string memory productName,
+        uint32 registeredSince,
+        uint32 unregisteredSince,
+        bool registered) {
+
+        Product memory p = Products[_productId];
         return (p.productName,p.registeredSince,p.unregisteredSince,p.registered);
      }
 
@@ -389,7 +399,7 @@ contract VendorContract is Ownable {
         view
         returns (bool registered)
     {
-        require(productExist(_productId),"This vendor doesn't exist");
+        require(productExist(_productId), "This product doesn't exist");
         registered=Products[_productId].registered;
     }
 

@@ -42,5 +42,19 @@ contract VendorContractTest is VendorContract {
         
         hashlockComputed = keccak256(abi.encodePacked(secret));
         equal = (hashlock == hashlockComputed);
-    }    
+    }
+
+    function produceId(address _vendor, bytes32 _hashlock,
+                        bytes32 _productId, bytes32 _vulnerabilityHash) public view returns(bytes32) {
+
+        return keccak256(
+            abi.encodePacked(
+                msg.sender,
+                _vendor,
+                _hashlock,
+                _productId,
+                _vulnerabilityHash
+            )
+        );    
+    }
 }
