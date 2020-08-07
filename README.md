@@ -20,43 +20,43 @@ The Authority deploys the smart contract. A Researcher uploads an entry consisti
 - OR
 - V.State == Patched
 
-The current smart contract also stores a reward for the researcher that can be collected by them at any moment after the vulnerability has been disclosed (V.State == Disclosed). The reward amount is set and funded by the Vendor at acknowledgeVulnerability.
+The disclosure consists of two phases: publishing the secret (Disclosable), and fully disclose the vulnerability data (Disclosed). The current smart contract also stores a reward for the researcher that can be collected by them at any moment after the secret  has been published (V.State == Disclosed). The reward amount is set by the Vendor at acknowledgeVulnerability.
 
 ## Structure of the folders
 
 During the development phase we are evaluating different architectures of smart contracts. Both the **contracts/** and **test/** folders keep a sub-folder for each proposed architecture. Currently we have:
 - *singleContract/*: In this design the system is composed by a single smart contract keeping a reference to each vulnerability. A vulnerability is a *struct*;
 - *contractPerVulnerability/*: In this design the system is composed by a factory contract creating a smart contract for each vulnerability. A smart contract for a Vendor is also provided to manage the bounties;
-- *contractPerVendor/*: **(TODO)** In this design we have a factory contract creating a smart contract for each Vendor. Each Vendor contract manages the bouties and stores, as *structs*, the vulnerability records opened to that particular Vendor.
+- *contractPerVendor/*: In this design we have a factory contract creating a smart contract for each Vendor. Each Vendor contract manages the bouties and stores, as *structs*, the vulnerability records opened to that particular Vendor. The Authority owns two contracts: the VendorFactory, a factory of VendorContracts, and the AuthorityContract for the ARD process. The factory is needed to avoid a bytecode too large for the AuhtorityContract.
 
+![Diagram](./images/SM-diagram2.png)
 
 ## The flow of the smart contract functions
 
-**This flow follows the singleContract version. TODO move this description inside *contracts/singleContract/***
+**The flow reflects the contractPerVendor version, the "official" one**
 
-In the figure below shows the sequence of calls of the smart contract functions. The boxes (frames) represent the cases that we can have:
-- The Authority creates (deploy) the smart contract
-- The Researcher produces the secret and creates a new vulnerability entry
-- The Authority does not approve the vulnerability
-- The Authority approves the vulnerability
-- The Researcher discloses the vulnerability revealing the secret after two conditions:
-    - The Vendor accepts and provides a patch
-    - The grace period expires (shown the case only before acknowledgement)
+In the figures below shows the sequence of calls of the smart contract functions. An UML "Actor" represents an Ethereum Externally Owned Account (EOA); a rectangle a smart contract.
 
-![Sequence](./images/Sequence.png)
+The setup for the Authority requires the following steps:
+
+![Auhtority](./images/ARD-Setup-Authority.png)
+
+The transfer_ownership activates the factory. Here we have a weird race condition where the VendorFactory needs to know the address of the AuhtorityContract (its owner), and the AuhtorityContract needs to know the address of the Factory (to call its factory method).
+
+The setup for the Vendor requires the following steps:
+
+![Auhtority](./images/ARD-Setup-Vendor.png)
+
+The Vendor funds the contract for bounties, and registers its products.
+
+The ARD flow is the following:
+
+![Auhtority](./images/ARD-Flow.png)
+
 
 ## TODO
 
-- [ ] Currently, the bounty is set by the Vendor and the amount stored in this smart contract.
-Manage the bounty by a second smart contract deployed by the Vendor **DOING in contractPerVendor**
-- [X] Is the bounty amount arbitrarly chosent by the Vendor, or they need to set an amount proportional to the severity chosen by the Authority? **By the Vendor**
-- [X] Decide whether the patch data needs to be stored, or the patch data is included in the vulnerability data at the end of the process **No storage for the patch data**
-- [ ] Decide the structure of the vulnerability metadata
-- [ ] The disclosure of the vulnerability requires 1 or 2 transactions?
-    - 1 Tx: as soon the smart contract goes to the Disclosed state it needs to receive as input the location of the vulnerability data. This means the location is known in advance
-    - 2 Txs: a first transaction is used to disclose the secret and set the smart contract in the Disclosed state. With a second transaction the IL component stores into the smart contract the location of the vulnerability data. This means the smart contract requires the Ethereum address of IL, and an additional state
 - [X] Write the tests for the smart contract
-- [ ] A README file for each design of the system. Include sequence diagrams
 
 ## Requirements
 
