@@ -32,6 +32,7 @@ contract("AuthorityContract", function(accounts) {
     const hashlock = web3.utils.soliditySha3({type: 'uint', value: secret});
     const metadata = web3.utils.fromAscii(new String(13245678910)); // Random metadata in bytes32
     const bounty = web3.utils.toWei('1', 'ether');
+    const funds = web3.utils.toWei('5', 'ether');
     const vendorName = web3.utils.fromAscii("Test vendor");
     const productName = "Test product: Test version";
     const vulnerabilityData = "Vulnerability detailed description in text format";
@@ -87,7 +88,6 @@ contract("AuthorityContract", function(accounts) {
                 "This product already exist" // String of the revert
             );
         });
-
     });
 
 
@@ -123,17 +123,134 @@ contract("AuthorityContract", function(accounts) {
 
         it("Should NOT unregister a non-registered product", async function() {
 
-            // Use other bytes32 data
+            // Use any other bytes32 data
             await truffleAssert.fails(
                 vendor.unregisterProduct(vulnerabilityHash, {from: vendorAddress}),
                 truffleAssert.ErrorType.REVERT,
                 "This product doesn't exist" // String of the revert
             );
         });
-
     });
 
+
     describe("newVulnerability()", function() {
+
+        let vendor;
+        let productId;
+
+        beforeEach(async function() {
+
+            vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
+            const tx = await vendor.registerProduct(productName, {from: vendorAddress});
+            productId = tx["logs"][0].args._productId;
+        });
+
+        it("Should store a new vulnerability record", async function() {
+
+            const tx = await vendor.newVulnerability(vulnerabilityId, researcherAddress, productId, vulnerabilityHash, hashlock, {from: authorityAddress});
+
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            const metadata = await vendor.getVulnerabilityMetadata(vulnerabilityId);
+            const reward = await vendor.getVulnerabilityReward(vulnerabilityId);
+            
+            const block_n = tx.receipt.blockNumber;
+            const block = await web3.eth.getBlock(block_n);
+
+            assert.equal(info[0], researcherAddress, "The researcher address should be " + researcherAddress);
+            assert.equal(info[1], STATUS.Pending, "The status should be " + STATUS.Pending + " (Pending)");
+            assert.equal(info[2], hashlock, "The hashlock should be " + hashlock);
+            assert.equal(info[3], 0, "The timelock should be " + 0);
+            assert.equal(info[4], 0, "The secret should be " + 0);
+            assert.equal(info[5], "", "The vulnerability location should be empty");
+
+            assert.equal(metadata[0], block.timestamp, "The creation timestamp should be " + block.timestamp);
+            assert.equal(metadata[1], productId, "The product id should be " + productId);
+            assert.equal(metadata[2], vulnerabilityHash, "The vulnerability hash data should be " + vulnerabilityHash);
+
+            assert.equal(reward[0], REWARDSTATE.NULL, "The reward state should be " + REWARDSTATE.NULL + " (NULL)");
+            assert.equal(reward[1], 0, "The reward amount should be " + 0);
+        });
+
+        it("Should NOT store a new vulnerability record: product does not exist", async function() {
+
+            await truffleAssert.fails(
+                vendor.newVulnerability(vulnerabilityId, researcherAddress, hashlock, // wrong product id 
+                    vulnerabilityHash, hashlock, {from: authorityAddress}),
+                truffleAssert.ErrorType.REVERT,
+                "Product Id not registered" // String of the revert
+            );
+        });
+
+        it("Should NOT store a new vulnerability record: wrong caller", async function() {
+
+            await truffleAssert.fails(
+                vendor.newVulnerability(vulnerabilityId, researcherAddress, productId, vulnerabilityHash, hashlock, {from: researcherAddress}),
+                truffleAssert.ErrorType.REVERT,
+                "The caller is not the authority" // String of the revert
+            );
+        });          
+    });
+
+
+    describe("set functions", function() {
+
+        let vendor;
+        let productId;
+
+        beforeEach(async function() {
+
+            vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
+            const tx = await vendor.registerProduct(productName, {from: vendorAddress});
+            productId = tx["logs"][0].args._productId;
+            await vendor.newVulnerability(vulnerabilityId, researcherAddress, productId, vulnerabilityHash, hashlock, {from: authorityAddress});
+        });
+
+        it("setState()", async function() {
+
+            // Any state
+            const tx = await vendor.setState(vulnerabilityId, STATUS.Patched, {from: authorityAddress});
+
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            assert.equal(info[1], STATUS.Patched, "The status should be " + STATUS.Patched + " (Patched)");
+        });
+
+        it("setRewardState()", async function() {
+
+            // Any state
+            await vendor.setRewardState(vulnerabilityId, REWARDSTATE.SENT, {from: authorityAddress});
+
+            const reward = await vendor.getVulnerabilityReward(vulnerabilityId);
+            assert.equal(reward[0], REWARDSTATE.SENT, "The reward state should be " + REWARDSTATE.SENT + " (SENT)");
+        });
+
+        it("setTimelock()", async function() {
+
+            const timelock = 10000;
+            await vendor.setTimelock(vulnerabilityId, timelock, {from: authorityAddress});
+
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            assert.equal(info[3], timelock, "The timelock should be " + timelock);
+        });
+
+        it("setSecret()", async function() {
+
+            await vendor.setSecret(vulnerabilityId, secret, {from: authorityAddress});
+
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            assert.equal(info[4], secret, "The secret should be " + secret);
+        });
+
+        it("setLocation()", async function() {
+
+            await vendor.setLocation(vulnerabilityId, vulnerabilityLocation, {from: authorityAddress});
+
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            assert.equal(info[5], vulnerabilityLocation, "The vulnerability location should be " + vulnerabilityLocation);
+        });
+    });
+
+    
+    describe("receive()", function() {
 
         let vendor;
 
@@ -142,15 +259,83 @@ contract("AuthorityContract", function(accounts) {
             vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
         });
 
-        it("Should store a new vulnerability record", async function() {
+        it("Should receive ether from the vendor", async function() {
 
-            // await vendor.newVulnerability(vulnerabilityId, researcherAddress, productId, vulnerabilityHash, hashlock);
+            await web3.eth.sendTransaction({
+                from: vendorAddress,
+                to: vendor.address,
+                value: funds
+            });
 
-            // const authority = await vendor.authority();
+            const balance = await web3.eth.getBalance(vendor.address);
 
-            // assert.equal(authority, authorityAddress, "The address of authority should be " + authorityAddress);
+            assert.equal(balance, funds, "The contract should have " + funds +  " wei in its balance");
+        });
+
+        it("Should NOT receive ether from others than the vendor", async function() {
+
+            await truffleAssert.fails(
+                web3.eth.sendTransaction({
+                    from: researcherAddress,
+                    to: vendor.address,
+                    value: funds
+                }),
+                truffleAssert.ErrorType.REVERT,
+                "Ownable: caller is not the owner" // String of the revert
+            );
         });
     });
 
-    
+
+    describe("acknowledge()", function() {
+
+        let vendor;
+        let productId;
+
+        beforeEach(async function() {
+
+            vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
+            const tx = await vendor.registerProduct(productName, {from: vendorAddress});
+            productId = tx["logs"][0].args._productId;
+            await vendor.newVulnerability(vulnerabilityId, researcherAddress, productId, vulnerabilityHash, hashlock, {from: authorityAddress});
+            await web3.eth.sendTransaction({
+                from: vendorAddress,
+                to: vendor.address,
+                value: funds
+            });
+        });
+
+        it("Should acknowledge the vulnerability", async function() {
+
+            const timelock = (new Date()).getTime() + 100000;
+
+            // Set the state in a valid state for the function
+            await vendor.setState(vulnerabilityId, STATUS.Valid, {from: authorityAddress});
+            await vendor.setTimelock(vulnerabilityId, timelock, {from: authorityAddress});
+
+            await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            const reward = await vendor.getVulnerabilityReward(vulnerabilityId);
+            const balanceOwner = await vendor.balanceOwner();
+
+            assert.equal(info[1], STATUS.Acknowledged, "The state should be " + STATUS.Acknowledged + " (Acknowledged)");
+            assert.equal(reward[0], REWARDSTATE.SET, "The reward state should be " + REWARDSTATE.SET + " (SET)");
+            assert.equal(reward[1], bounty, "The reward amount should be " + bounty);
+            assert.equal(balanceOwner, funds - bounty, "The leftover balance of the contract should be " + funds - bounty);
+        });
+
+        // it("Should NOT receive ether from others than the vendor", async function() {
+
+        //     await truffleAssert.fails(
+        //         web3.eth.sendTransaction({
+        //             from: researcherAddress,
+        //             to: vendor.address,
+        //             value: funds
+        //         }),
+        //         truffleAssert.ErrorType.REVERT,
+        //         "Ownable: caller is not the owner" // String of the revert
+        //     );
+        // });
+    });    
 });

@@ -23,7 +23,7 @@ contract VendorContract is Ownable {
 
     modifier onlyAuhtority {
 
-        require(msg.sender == authority);
+        require(msg.sender == authority, "The caller is not the authority");
         _;
     }
 
