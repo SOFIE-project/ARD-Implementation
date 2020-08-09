@@ -337,5 +337,33 @@ contract("AuthorityContract", function(accounts) {
         //         "Ownable: caller is not the owner" // String of the revert
         //     );
         // });
-    });    
+    });   
+    
+    describe("method name", function() {
+
+        beforeEach(async function() {
+
+            // Execute before each it() statement, common initialization
+        });
+
+        it("Should repsect this condition ....", async function() {
+
+            // Write code to end up in a known ok state (tested before)
+            
+            // Write command to test
+
+            // Assert the state of the contract and check it is the expected one
+        });
+
+        it("Should NOT respect this condition ....", async function() {
+
+            // Write code to end up in a known ok state (tested before)
+            
+            // Write command to test
+
+            // Assert the state of the contract and check it is the expected one
+        });
+    });     
+
+    
 });
