@@ -56,7 +56,7 @@ contract VendorContract is Ownable {
 
     // States
 
-    enum State {Pending, Invalid, Valid, Acknowledged, Patched, Disclosable, Disclosed}
+    enum State {Pending, Invalid, Valid, Duplicate, Acknowledged, Patched, Disclosable, Disclosed}
     enum RewardState {NULL, SET, CANCELED, SENT}
 
 
