@@ -269,8 +269,9 @@ contract AuthorityContract is Ownable {
      * @param _timelock UNIX epoch seconds time that  lock expires at.
      * @param _vulnerabilityId The condract identifier.
      * @param _approved The approval parameter.
+     * @param _duplicate The duplicate parameter.
      */
-    function approve(bytes32 _vulnerabilityId, uint32 _timelock, bool _approved)
+    function approve(bytes32 _vulnerabilityId, uint32 _timelock, bool _approved, bool _duplicate)
         public
         onlyOwner()
         futureTimelock(_timelock)
@@ -287,8 +288,13 @@ contract AuthorityContract is Ownable {
             _newState = VendorContract.State.Invalid;
         }
         else {
-            vendorContract.setTimelock(_vulnerabilityId,_timelock);
-            _newState = VendorContract.State.Valid;
+            if (!_duplicate) {
+               vendorContract.setTimelock(_vulnerabilityId,_timelock);
+               _newState = VendorContract.State.Valid;
+            }
+            else {
+               _newState = VendorContract.State.Duplicate;
+            }
         }
 
         vendorContract.setState(_vulnerabilityId, _newState);
