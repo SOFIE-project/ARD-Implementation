@@ -35,14 +35,6 @@ contract AuthorityContract is Ownable {
         bytes32 vulnerabilityHash
     );
 
-    event LogVulnerabilityDuplicate(
-        bytes32 indexed vulnerabilityId,
-        address indexed vendor,
-        uint32 timestamp,
-        bytes32 productId,
-        bytes32 vulnerabilityHash,
-        VendorContract.State state
-    );
 
     event LogVulnerabilityApproval(
         bytes32 indexed vulnerabilityId,
@@ -111,7 +103,6 @@ contract AuthorityContract is Ownable {
     mapping(bytes32 => address) public VendorVulnerabilities; // map vulnerabilityId to vendor
     bytes32[] public vulnerabilityIndex; // The array provides a list of vulnerabilityId to easy retrive them all
 
-    mapping(bytes32 => bytes32) HashData; // mapping vulnerability_hash => vulnerabilityId
 
 
     // Methods
@@ -250,27 +241,6 @@ contract AuthorityContract is Ownable {
         if (haveVulnerability(_vulnerabilityId))
             revert("Vulnerability already exists");
 
-        // If the submission contains already the same vulnerability information hash, fire event and return the currently stored contract
-        if (HashData[_vulnerabilityHash] != 0x0) {
-
-            _vulnerabilityId = HashData[_vulnerabilityHash];
-
-            // Retrive vulnerability metadata
-            (uint32 __timestamp,
-             bytes32 __productId,
-            ) = vendorContract.getVulnerabilityMetadata(_vulnerabilityId);
-            (,VendorContract.State _state,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
-
-            emit LogVulnerabilityDuplicate(_vulnerabilityId,
-                            _vendor,
-                            __timestamp,
-                            __productId,
-                            _vulnerabilityHash,
-                            _state
-                            );
-
-            return _vulnerabilityId;
-        }
 
         // Associate the contract with the vulnerability metadata
         vendorContract.newVulnerability(_vulnerabilityId,
@@ -278,7 +248,8 @@ contract AuthorityContract is Ownable {
                                         _productId,
                                         _vulnerabilityHash,
                                         _hashlock);
-        HashData[_vulnerabilityHash] = _vulnerabilityId;
+        
+        
         VendorVulnerabilities[_vulnerabilityId] = _vendor;
         vulnerabilityIndex.push(_vulnerabilityId);
 
