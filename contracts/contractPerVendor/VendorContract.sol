@@ -85,7 +85,8 @@ contract VendorContract is Ownable {
     struct Vulnerability {
 
         address payable expert; // expert address
-        uint32 timelock;                  // UNIX timestamp seconds - locked UNTIL this time //deadline
+        uint32 ackTimelock                 // UNIX timestamp seconds - locked UNTIL this time //first deadline
+        uint32 timelock;                  // UNIX timestamp seconds - locked UNTIL this time //second deadline
         State state;                  // The state of the vulnerability
         Reward reward;                  // The reward for this vulnerability
         Metadata metadata;              // Metadata info
@@ -108,7 +109,7 @@ contract VendorContract is Ownable {
      * @dev The function is called by the vulnerability authority to set up a new vulnerability contract.
      *
      * @param vulnerabilityId The identifier of the vulnerability
-     * @param _expert The Resercher address
+     * @param _expert The expert address
      * @param _productId The id of the product
      * @param _vulnerabilityHash The hash of the vulnerability data
      * @param _hashlock The secret hash used also for the hashlock (sha-2 sha256).
@@ -136,6 +137,7 @@ contract VendorContract is Ownable {
         Vulnerabilities[vulnerabilityId] = Vulnerability({
             expert: _expert,
             hashlock: _hashlock,
+            ackTimelock:0,
             timelock: 0,
             vulnerabilityLocation: "",
             state: State.Pending,
@@ -173,17 +175,19 @@ contract VendorContract is Ownable {
     }
 
      /**
-     * @dev The authority set the timelock of the vulnerability
+     * @dev The authority set the timelocks of the vulnerability
      *
      * @param _vulnerabilityId The identifier of the vulnerability
+     * @param _ackTimelock The new ack timelock of the vulnerability
      * @param _timelock The new timelock of the vulnerability
      */
 
-    function setTimelock(bytes32 _vulnerabilityId, uint32 _timelock) external onlyAuhtority {
+    function setTimelock(bytes32 _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock) external onlyAuhtority {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
 
         require(v.timelock == 0, "Timelock has been set already");
+        v.ackTimelock = _ackTimelock;
         v.timelock = _timelock;
     }
 
@@ -236,7 +240,7 @@ contract VendorContract is Ownable {
     }
 
      /**
-     * @dev The authority pay the bounty to the expert (e.g the expert cheated)
+     * @dev The authority pay the bounty to the expert
      *
      * @param _vulnerabilityId The identifier of the vulnerability
      */
@@ -320,11 +324,12 @@ contract VendorContract is Ownable {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
 
-        require(uint32(block.timestamp) < v.timelock, "The timelock has expired");
+        require(uint32(block.timestamp) < v.ackTimelock, "The ack timelock has expired");
         // require(msg.value == _bounty, "Value sent does not match the input bounty");
         require(balanceOwner > _bounty);
 
         v.state = State.Acknowledged;
+        
         v.reward.state = RewardState.SET;
         v.reward.amount = _bounty;
         balanceOwner -= _bounty;
