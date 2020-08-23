@@ -84,7 +84,7 @@ contract VendorContract is Ownable {
 
     struct Vulnerability {
 
-        address payable researcher; // Researcher address
+        address payable expert; // expert address
         uint32 timelock;                  // UNIX timestamp seconds - locked UNTIL this time //deadline
         State state;                  // The state of the vulnerability
         Reward reward;                  // The reward for this vulnerability
@@ -108,7 +108,7 @@ contract VendorContract is Ownable {
      * @dev The function is called by the vulnerability authority to set up a new vulnerability contract.
      *
      * @param vulnerabilityId The identifier of the vulnerability
-     * @param _researcher The Resercher address
+     * @param _expert The Resercher address
      * @param _productId The id of the product
      * @param _vulnerabilityHash The hash of the vulnerability data
      * @param _hashlock The secret hash used also for the hashlock (sha-2 sha256).
@@ -116,7 +116,7 @@ contract VendorContract is Ownable {
 
     function newVulnerability (
         bytes32 vulnerabilityId,
-        address payable _researcher,
+        address payable _expert,
         bytes32 _productId,
         bytes32 _vulnerabilityHash,
         bytes32 _hashlock
@@ -134,7 +134,7 @@ contract VendorContract is Ownable {
 
         // Create new vulnerability entry
         Vulnerabilities[vulnerabilityId] = Vulnerability({
-            researcher: _researcher,
+            expert: _expert,
             hashlock: _hashlock,
             timelock: 0,
             vulnerabilityLocation: "",
@@ -216,7 +216,7 @@ contract VendorContract is Ownable {
     }
 
     /**
-     * @dev The authority cancels the vulnerability bounty (e.g the researcher cheated)
+     * @dev The authority cancels the vulnerability bounty (e.g the expert cheated)
      *
      * @param _vulnerabilityId The identifier of the vulnerability
      * @param _motivation The motivation why vulnerability has been deleted
@@ -236,7 +236,7 @@ contract VendorContract is Ownable {
     }
 
      /**
-     * @dev The authority pay the bounty to the researcher (e.g the researcher cheated)
+     * @dev The authority pay the bounty to the expert (e.g the expert cheated)
      *
      * @param _vulnerabilityId The identifier of the vulnerability
      */
@@ -246,9 +246,9 @@ contract VendorContract is Ownable {
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
 
         uint amount = v.reward.amount;
-        address payable _researcher = v.researcher;
+        address payable _expert = v.expert;
         v.reward.state = RewardState.SENT;
-        _researcher.transfer(amount);
+        _expert.transfer(amount);
     }
 
 
@@ -304,7 +304,7 @@ contract VendorContract is Ownable {
 
 
      /**
-     * @dev The vendor acknowledges the vulnerability and set the ETH as a reward for the researcher.
+     * @dev The vendor acknowledges the vulnerability and set the ETH as a reward for the expert.
      *
      * @param _vulnerabilityId The condract identifier.
      * @param _bounty The bounty in ETH.
@@ -414,7 +414,7 @@ contract VendorContract is Ownable {
         ) {
 
         Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
-        return(address(v.researcher), v.state, v.hashlock, v.timelock, v.secret, v.vulnerabilityLocation);
+        return(address(v.expert), v.state, v.hashlock, v.timelock, v.secret, v.vulnerabilityLocation);
     }
 
 
@@ -441,7 +441,7 @@ contract VendorContract is Ownable {
         internal
         view
         returns (bool exists) {
-        exists = (Vulnerabilities[_vulnerabilityId].researcher != address(0));
+        exists = (Vulnerabilities[_vulnerabilityId].expert != address(0));
     }
 
     // Receive function to fund the contract
