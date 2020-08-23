@@ -29,7 +29,7 @@ contract AuthorityContract is Ownable {
 
     event LogVulnerabilityNew(
         bytes32 indexed vulnerabilityId,
-        address indexed researcher,
+        address indexed expert,
         address indexed vendor,
         bytes32 hashlock,
         bytes32 vulnerabilityHash
@@ -108,9 +108,8 @@ contract AuthorityContract is Ownable {
     // Methods
 
     /**
-
         Vendor's related methods
-    
+
      */
 
     /**
@@ -196,9 +195,8 @@ contract AuthorityContract is Ownable {
 
 
     /**
-    
-        ARD process methods
 
+        ARD process methods
      */
 
     /**
@@ -248,8 +246,8 @@ contract AuthorityContract is Ownable {
                                         _productId,
                                         _vulnerabilityHash,
                                         _hashlock);
-        
-        
+
+
         VendorVulnerabilities[_vulnerabilityId] = _vendor;
         vulnerabilityIndex.push(_vulnerabilityId);
 
@@ -304,8 +302,8 @@ contract AuthorityContract is Ownable {
     }
 
  /**
-     * @dev Called by who knows the secret (the researcher or the authority).
-     * This will allow the researcher to withdraw the bounty.
+     * @dev Called by who knows the secret (the expert or the authority).
+     * This will allow the expert to withdraw the bounty.
      *
      * @param _vulnerabilityId Id of the VulnerabilityContract.
      * @param _secret The preimage of the hashlock
@@ -336,8 +334,8 @@ contract AuthorityContract is Ownable {
     }
 
      /**
-     * @dev Called by interledger (the researcher or the authority).
-     * This will allow the researcher to withdraw the bounty.
+     * @dev Called by interledger (the expert or the authority).
+     * This will allow the expert to withdraw the bounty.
      *
      * @param _vulnerabilityId Id of the VulnerabilityContract.
      * @param _vulnerabilityLocation The preimage of the hashlock
@@ -369,9 +367,7 @@ contract AuthorityContract is Ownable {
 
 
     /**
-
         Cancel bounty
-
      */
 
 
