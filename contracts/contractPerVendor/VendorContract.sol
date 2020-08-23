@@ -409,17 +409,18 @@ contract VendorContract is Ownable {
     }
 
 
-    function getVulnerabilityInfo (bytes32 _vulnerabilityId) external view returns(
+    function getVulnerabilityInfo(bytes32 _vulnerabilityId) external view returns(
         address ,
         State ,
         bytes32 ,
+        uint32 ,
         uint32 ,
         uint ,
         string memory
         ) {
 
         Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
-        return(address(v.expert), v.state, v.hashlock, v.timelock, v.secret, v.vulnerabilityLocation);
+        return(address(v.expert), v.state, v.hashlock, v.timelock, v.ackTimelock, v.secret, v.vulnerabilityLocation);
     }
 
 
