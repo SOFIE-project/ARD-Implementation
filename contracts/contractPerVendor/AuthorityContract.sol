@@ -55,10 +55,12 @@ contract AuthorityContract is Ownable {
         _;
     }
 
-    modifier futureTimelock(uint32 _time) {
-
+    modifier futureTimelock(uint32 _time1, uint32 _time2) {
+    
+        // The timelocks are after the last blocktime (now).
+        require(_time1 > uint32(block.timestamp) && _time >1 uint32(block.timestamp) , "timelocks must be in the future");
         // The timelock time is after the last blocktime (now).
-        require(_time > uint32(block.timestamp), "timelock time must be in the future");
+        require(_time2 > _time1, "timelock shuold be greater than ack timelock");
         _;
     }
 
@@ -72,7 +74,7 @@ contract AuthorityContract is Ownable {
 
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
-        (,,bytes32 _hashlock,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        (,,bytes32 _hashlock,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
         require(_hashlock == keccak256(abi.encodePacked(_secret)),"Hashed secret and hashlock do not match");
         _;
     }
@@ -271,12 +273,13 @@ contract AuthorityContract is Ownable {
      * @param _approved The approval parameter.
      * @param _duplicate The duplicate parameter.
      */
-    function approve(bytes32 _vulnerabilityId, uint32 _timelock, bool _approved, bool _duplicate)
+    function approve(bytes32 _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock, bool _approved, bool _duplicate)
         public
         onlyOwner()
-        futureTimelock(_timelock)
+        futureTimelock(_ackTimelock,_timelock)
         vulnerabilityExists(_vulnerabilityId){
-
+        
+        
         // Retrive VendorContract
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
@@ -289,7 +292,7 @@ contract AuthorityContract is Ownable {
         }
         else {
             if (!_duplicate) {
-               vendorContract.setTimelock(_vulnerabilityId,_timelock);
+               vendorContract.setTimelock(_vulnerabilityId,_ackTimelock,_timelock);
                _newState = VendorContract.State.Valid;
             }
             else {
@@ -357,7 +360,7 @@ contract AuthorityContract is Ownable {
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
         //Retrive rewardState
-        (,VendorContract.State state,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        (,VendorContract.State state,,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
 
         //verify secret has been published
         require(state == VendorContract.State.Disclosable);
@@ -411,9 +414,9 @@ contract AuthorityContract is Ownable {
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        (,VendorContract.State _state,,uint _timlock,,)=vendorContract.getVulnerabilityInfo(_vulnerabilityId);
-        return  ((_state == VendorContract.State.Valid || _state == VendorContract.State.Acknowledged) && _timlock < block.timestamp) ||
-                (_state == VendorContract.State.Patched);
+        (,VendorContract.State _state,,uint _timlock,uint _acktimlock,,)=vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        return  ((_state == VendorContract.State.Valid && _acktimelock < block.timestamp ) || (_state == VendorContract.State.Acknowledged && _timelock < block.timestamp) ||
+                (_state == VendorContract.State.Patched));
     }
 
 }
