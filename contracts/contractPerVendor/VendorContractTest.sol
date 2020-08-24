@@ -25,12 +25,12 @@ contract VendorContractTest is VendorContract {
         v.reward.amount = _amount;
     }
 
-    function setVulnerability(bytes32 _vulnerabilityID, address payable _researcher,
+    function setVulnerability(bytes32 _vulnerabilityID, address payable _expert,
                                 uint32 _timelock, State _state, uint _secret,
                                 bytes32 _hashlock, string memory _location) public {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityID];
-        v.researcher = _researcher;
+        v.expert = _expert;
         v.timelock = _timelock;
         v.state = _state;
         v.secret = _secret;

@@ -29,20 +29,12 @@ contract AuthorityContract is Ownable {
 
     event LogVulnerabilityNew(
         bytes32 indexed vulnerabilityId,
-        address indexed researcher,
+        address indexed expert,
         address indexed vendor,
         bytes32 hashlock,
         bytes32 vulnerabilityHash
     );
 
-    event LogVulnerabilityDuplicate(
-        bytes32 indexed vulnerabilityId,
-        address indexed vendor,
-        uint32 timestamp,
-        bytes32 productId,
-        bytes32 vulnerabilityHash,
-        VendorContract.State state
-    );
 
     event LogVulnerabilityApproval(
         bytes32 indexed vulnerabilityId,
@@ -63,10 +55,12 @@ contract AuthorityContract is Ownable {
         _;
     }
 
-    modifier futureTimelock(uint32 _time) {
-
+    modifier futureTimelock(uint32 _time1, uint32 _time2) {
+    
+        // The timelocks are after the last blocktime (now).
+        require(_time1 > uint32(block.timestamp) && _time >1 uint32(block.timestamp) , "timelocks must be in the future");
         // The timelock time is after the last blocktime (now).
-        require(_time > uint32(block.timestamp), "timelock time must be in the future");
+        require(_time2 > _time1, "timelock shuold be greater than ack timelock");
         _;
     }
 
@@ -80,7 +74,7 @@ contract AuthorityContract is Ownable {
 
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
-        (,,bytes32 _hashlock,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        (,,bytes32 _hashlock,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
         require(_hashlock == keccak256(abi.encodePacked(_secret)),"Hashed secret and hashlock do not match");
         _;
     }
@@ -111,15 +105,13 @@ contract AuthorityContract is Ownable {
     mapping(bytes32 => address) public VendorVulnerabilities; // map vulnerabilityId to vendor
     bytes32[] public vulnerabilityIndex; // The array provides a list of vulnerabilityId to easy retrive them all
 
-    mapping(bytes32 => bytes32) HashData; // mapping vulnerability_hash => vulnerabilityId
 
 
     // Methods
 
     /**
-
         Vendor's related methods
-    
+
      */
 
     /**
@@ -205,9 +197,8 @@ contract AuthorityContract is Ownable {
 
 
     /**
-    
-        ARD process methods
 
+        ARD process methods
      */
 
     /**
@@ -250,27 +241,6 @@ contract AuthorityContract is Ownable {
         if (haveVulnerability(_vulnerabilityId))
             revert("Vulnerability already exists");
 
-        // If the submission contains already the same vulnerability information hash, fire event and return the currently stored contract
-        if (HashData[_vulnerabilityHash] != 0x0) {
-
-            _vulnerabilityId = HashData[_vulnerabilityHash];
-
-            // Retrive vulnerability metadata
-            (uint32 __timestamp,
-             bytes32 __productId,
-            ) = vendorContract.getVulnerabilityMetadata(_vulnerabilityId);
-            (,VendorContract.State _state,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
-
-            emit LogVulnerabilityDuplicate(_vulnerabilityId,
-                            _vendor,
-                            __timestamp,
-                            __productId,
-                            _vulnerabilityHash,
-                            _state
-                            );
-
-            return _vulnerabilityId;
-        }
 
         // Associate the contract with the vulnerability metadata
         vendorContract.newVulnerability(_vulnerabilityId,
@@ -278,7 +248,8 @@ contract AuthorityContract is Ownable {
                                         _productId,
                                         _vulnerabilityHash,
                                         _hashlock);
-        HashData[_vulnerabilityHash] = _vulnerabilityId;
+
+
         VendorVulnerabilities[_vulnerabilityId] = _vendor;
         vulnerabilityIndex.push(_vulnerabilityId);
 
@@ -300,13 +271,15 @@ contract AuthorityContract is Ownable {
      * @param _timelock UNIX epoch seconds time that  lock expires at.
      * @param _vulnerabilityId The condract identifier.
      * @param _approved The approval parameter.
+     * @param _duplicate The duplicate parameter.
      */
-    function approve(bytes32 _vulnerabilityId, uint32 _timelock, bool _approved)
+    function approve(bytes32 _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock, bool _approved, bool _duplicate)
         public
         onlyOwner()
-        futureTimelock(_timelock)
+        futureTimelock(_ackTimelock,_timelock)
         vulnerabilityExists(_vulnerabilityId){
-
+        
+        
         // Retrive VendorContract
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
@@ -318,8 +291,13 @@ contract AuthorityContract is Ownable {
             _newState = VendorContract.State.Invalid;
         }
         else {
-            vendorContract.setTimelock(_vulnerabilityId,_timelock);
-            _newState = VendorContract.State.Valid;
+            if (!_duplicate) {
+               vendorContract.setTimelock(_vulnerabilityId,_ackTimelock,_timelock);
+               _newState = VendorContract.State.Valid;
+            }
+            else {
+               _newState = VendorContract.State.Duplicate;
+            }
         }
 
         vendorContract.setState(_vulnerabilityId, _newState);
@@ -333,8 +311,8 @@ contract AuthorityContract is Ownable {
     }
 
  /**
-     * @dev Called by who knows the secret (the researcher or the authority).
-     * This will allow the researcher to withdraw the bounty.
+     * @dev Called by who knows the secret (the expert or the authority).
+     * This will allow the expert to withdraw the bounty.
      *
      * @param _vulnerabilityId Id of the VulnerabilityContract.
      * @param _secret The preimage of the hashlock
@@ -365,8 +343,8 @@ contract AuthorityContract is Ownable {
     }
 
      /**
-     * @dev Called by interledger (the researcher or the authority).
-     * This will allow the researcher to withdraw the bounty.
+     * @dev Called by interledger (the expert or the authority).
+     * This will allow the expert to withdraw the bounty.
      *
      * @param _vulnerabilityId Id of the VulnerabilityContract.
      * @param _vulnerabilityLocation The preimage of the hashlock
@@ -382,7 +360,7 @@ contract AuthorityContract is Ownable {
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
         //Retrive rewardState
-        (,VendorContract.State state,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        (,VendorContract.State state,,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
 
         //verify secret has been published
         require(state == VendorContract.State.Disclosable);
@@ -398,9 +376,7 @@ contract AuthorityContract is Ownable {
 
 
     /**
-
         Cancel bounty
-
      */
 
 
@@ -438,9 +414,9 @@ contract AuthorityContract is Ownable {
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        (,VendorContract.State _state,,uint _timlock,,)=vendorContract.getVulnerabilityInfo(_vulnerabilityId);
-        return  ((_state == VendorContract.State.Valid || _state == VendorContract.State.Acknowledged) && _timlock < block.timestamp) ||
-                (_state == VendorContract.State.Patched);
+        (,VendorContract.State _state,,uint _timlock,uint _acktimlock,,)=vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        return  ((_state == VendorContract.State.Valid && _acktimelock < block.timestamp ) || (_state == VendorContract.State.Acknowledged && _timelock < block.timestamp) ||
+                (_state == VendorContract.State.Patched));
     }
 
 }
