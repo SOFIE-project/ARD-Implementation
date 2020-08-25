@@ -85,7 +85,7 @@ contract VendorContract is Ownable {
     struct Vulnerability {
 
         address payable expert; // expert address
-        uint32 ackTimelock                 // UNIX timestamp seconds - locked UNTIL this time //first deadline
+        uint32 ackTimelock;                 // UNIX timestamp seconds - locked UNTIL this time //first deadline
         uint32 timelock;                  // UNIX timestamp seconds - locked UNTIL this time //second deadline
         State state;                  // The state of the vulnerability
         Reward reward;                  // The reward for this vulnerability

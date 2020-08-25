@@ -58,7 +58,7 @@ contract AuthorityContract is Ownable {
     modifier futureTimelock(uint32 _time1, uint32 _time2) {
     
         // The timelocks are after the last blocktime (now).
-        require(_time1 > uint32(block.timestamp) && _time >1 uint32(block.timestamp) , "timelocks must be in the future");
+        require(_time1 > uint32(block.timestamp) && _time2 > uint32(block.timestamp) , "timelocks must be in the future");
         // The timelock time is after the last blocktime (now).
         require(_time2 > _time1, "timelock shuold be greater than ack timelock");
         _;
@@ -95,6 +95,8 @@ contract AuthorityContract is Ownable {
         uint32 unregisteredSince;   // unregistration timestamp
         bool registered;
     }
+
+    enum ApprovedType { Approved, Invalid, Duplicate }
 
     // Maps and arrays
 
@@ -270,10 +272,9 @@ contract AuthorityContract is Ownable {
      *
      * @param _timelock UNIX epoch seconds time that  lock expires at.
      * @param _vulnerabilityId The condract identifier.
-     * @param _approved The approval parameter.
-     * @param _duplicate The duplicate parameter.
+     * @param _decision The approval parameter.
      */
-    function approve(bytes32 _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock, bool _approved, bool _duplicate)
+    function approve(bytes32 _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock, ApprovedType _decision)
         public
         onlyOwner()
         futureTimelock(_ackTimelock,_timelock)
@@ -287,17 +288,16 @@ contract AuthorityContract is Ownable {
 
         // Reject if the contract isn't aprroved (the verification is off chain)
         VendorContract.State _newState;
-        if (!_approved) {
+
+        if(_decision == ApprovedType.Invalid)
             _newState = VendorContract.State.Invalid;
-        }
+        
+        else if(_decision == ApprovedType.Duplicate)
+            _newState = VendorContract.State.Duplicate;
+        
         else {
-            if (!_duplicate) {
-               vendorContract.setTimelock(_vulnerabilityId,_ackTimelock,_timelock);
-               _newState = VendorContract.State.Valid;
-            }
-            else {
-               _newState = VendorContract.State.Duplicate;
-            }
+            vendorContract.setTimelock(_vulnerabilityId,_ackTimelock,_timelock);
+            _newState = VendorContract.State.Valid;
         }
 
         vendorContract.setState(_vulnerabilityId, _newState);
@@ -414,7 +414,7 @@ contract AuthorityContract is Ownable {
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        (,VendorContract.State _state,,uint _timlock,uint _acktimlock,,)=vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        (,VendorContract.State _state,,uint _timelock,uint _acktimelock,,)=vendorContract.getVulnerabilityInfo(_vulnerabilityId);
         return  ((_state == VendorContract.State.Valid && _acktimelock < block.timestamp ) || (_state == VendorContract.State.Acknowledged && _timelock < block.timestamp) ||
                 (_state == VendorContract.State.Patched));
     }
