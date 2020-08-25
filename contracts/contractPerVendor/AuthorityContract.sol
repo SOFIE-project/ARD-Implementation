@@ -38,6 +38,7 @@ contract AuthorityContract is Ownable {
 
     event LogVulnerabilityApproval(
         bytes32 indexed vulnerabilityId,
+        uint32 ackTimelock,
         uint32 timelock,
         VendorContract.State state,
         string motivation
@@ -52,7 +53,7 @@ contract AuthorityContract is Ownable {
 
     modifier onlyInterledger {
 
-        require(msg.sender == interledger);
+        require(msg.sender == interledger, "Not the interledger component");
         _;
     }
 
@@ -125,7 +126,7 @@ contract AuthorityContract is Ownable {
 
     function registerVendor(address _vendor) onlyOwner external {
 
-        require(!vendorExist(_vendor),"This vendor already exist");
+        require(!vendorExist(_vendor), "This vendor already exists");
 
         // VendorContract contractVendorAddress = new VendorContract(payable(_vendor));
         VendorContract contractVendorAddress = factory.createVendorContract(_vendor);
@@ -171,7 +172,7 @@ contract AuthorityContract is Ownable {
         uint32 unregisteredSince,
         bool registered){
 
-        require(idx<vulnerabilityIndex.length, "Out of range");
+        require(idx<vendorIndex.length, "Out of range");
         address vendor=vendorIndex[idx];
         VendorRecord memory vr= vendorRecords[vendor];
         return (vr._contract,vr.registeredSince,vr.unregisteredSince,vr.registered);
@@ -283,11 +284,12 @@ contract AuthorityContract is Ownable {
         futureTimelock(_ackTimelock,_timelock)
         vulnerabilityExists(_vulnerabilityId){
         
-        
         // Retrive VendorContract
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
+        (,VendorContract.State _state,,,,,)=vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        require(_state == VendorContract.State.Pending, "The vulnerability should be in pending state");
 
         // Reject if the contract isn't aprroved (the verification is off chain)
         VendorContract.State _newState;
@@ -307,6 +309,7 @@ contract AuthorityContract is Ownable {
 
         emit LogVulnerabilityApproval(
             _vulnerabilityId,
+            _ackTimelock,
             _timelock,
             _newState,
             _motivation
@@ -331,19 +334,18 @@ contract AuthorityContract is Ownable {
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        //Retrive rewardState
-        (VendorContract.RewardState _rewardState, uint _amount) = vendorContract.getVulnerabilityReward(_vulnerabilityId);
-
         //Set secret and state
         vendorContract.setSecret(_vulnerabilityId, _secret);
         vendorContract.setState(_vulnerabilityId, VendorContract.State.Disclosable);
 
-        require(_rewardState == VendorContract.RewardState.SET && _amount > 0, "Cannot claim reward");
-
-        vendorContract.payBounty(_vulnerabilityId);
-
         emit LogVulnerabilitySecret(_vulnerabilityId, _secret);
 
+        //Retrive rewardState
+        (VendorContract.RewardState _rewardState, uint _amount) = vendorContract.getVulnerabilityReward(_vulnerabilityId);
+
+            // Send the reward only if present
+        if(_rewardState == VendorContract.RewardState.SET && _amount > 0)
+            vendorContract.payBounty(_vulnerabilityId);
     }
 
      /**
@@ -367,7 +369,7 @@ contract AuthorityContract is Ownable {
         (,VendorContract.State state,,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
 
         //verify secret has been published
-        require(state == VendorContract.State.Disclosable);
+        require(state == VendorContract.State.Disclosable, "The state should be Disclosable");
 
         vendorContract.setState(_vulnerabilityId, VendorContract.State.Disclosed);
         vendorContract.setLocation(_vulnerabilityId, _vulnerabilityLocation);
