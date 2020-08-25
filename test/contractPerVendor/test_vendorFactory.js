@@ -1,6 +1,6 @@
 const truffleAssert = require('truffle-assertions');
 const Authority = artifacts.require("AuthorityContract");
-const Vendor = artifacts.require("VendorContractTest");
+const Vendor = artifacts.require("VendorContract");
 const Factory = artifacts.require("VendorFactoryTest");
 
 contract("VendorFactory", function(accounts) {
