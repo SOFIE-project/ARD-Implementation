@@ -39,13 +39,14 @@ contract AuthorityContract is Ownable {
     event LogVulnerabilityApproval(
         bytes32 indexed vulnerabilityId,
         uint32 timelock,
-        VendorContract.State state
+        VendorContract.State state,
+        string motivation
     );
 
     event LogVulnerabilitySecret(bytes32 indexed vulnerabilityId, uint secret);
     event LogVulnerabilityDisclose(bytes32 indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation);
-    event vendorRegistered(address indexed _vendor, address _vendorContract);
-    event vendorUnregistered(address indexed _vendor);
+    event VendorRegistered(address indexed vendor, address vendorContract);
+    event VendorUnregistered(address indexed vendor);
 
     // Modifiers
 
@@ -137,7 +138,7 @@ contract AuthorityContract is Ownable {
         vendorRecords[_vendor] = record;     // Store in the map the new pair (_vendorAddress, record)
         vendorIndex.push(_vendor);   // Store vendor address in array
 
-        emit vendorRegistered(_vendor, address(contractVendorAddress));
+        emit VendorRegistered(_vendor, address(contractVendorAddress));
 
     }
 
@@ -155,7 +156,7 @@ contract AuthorityContract is Ownable {
         VendorRecord storage record = vendorRecords[_vendor];
         record.registered=false;
         record.unregisteredSince = uint32(block.timestamp);
-        emit vendorUnregistered(_vendor);
+        emit VendorUnregistered(_vendor);
     }
 
    /**
@@ -273,8 +274,9 @@ contract AuthorityContract is Ownable {
      * @param _timelock UNIX epoch seconds time that  lock expires at.
      * @param _vulnerabilityId The condract identifier.
      * @param _decision The approval parameter.
+     * @param _motivation The motivation string
      */
-    function approve(bytes32 _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock, ApprovedType _decision)
+    function approve(bytes32 _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock, ApprovedType _decision, string memory _motivation)
         public
         onlyOwner()
         futureTimelock(_ackTimelock,_timelock)
@@ -289,7 +291,7 @@ contract AuthorityContract is Ownable {
         // Reject if the contract isn't aprroved (the verification is off chain)
         VendorContract.State _newState;
 
-        if(_decision == ApprovedType.Invalid)
+        if(_decision == ApprovedType.Invalid) 
             _newState = VendorContract.State.Invalid;
         
         else if(_decision == ApprovedType.Duplicate)
@@ -305,7 +307,8 @@ contract AuthorityContract is Ownable {
         emit LogVulnerabilityApproval(
             _vulnerabilityId,
             _timelock,
-            _newState
+            _newState,
+            _motivation
         );
 
     }

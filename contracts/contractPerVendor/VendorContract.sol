@@ -16,8 +16,8 @@ contract VendorContract is Ownable {
     event LogVulnerabilityAcknowledgment(bytes32 indexed vulnerabilityId, address indexed vendor, uint bounty);
     event LogVulnerabilityPatch(bytes32 indexed vulnerabilityId, address indexed vendor);
     event LogBountyCanceled(bytes32 indexed vulnerabilityId, string motivation);
-    event ProductRegistered(bytes32 indexed _productId);
-    event ProductUnregistered(bytes32 indexed _productId);
+    event ProductRegistered(bytes32 indexed productId);
+    event ProductUnregistered(bytes32 indexed productId);
 
     // Modifiers
 
@@ -316,8 +316,6 @@ contract VendorContract is Ownable {
 
     function acknowledge(bytes32 _vulnerabilityId, uint _bounty)
         public
-        // payable
-        // fundsSent()
         vulnerabilityExists(_vulnerabilityId)
         isValid(_vulnerabilityId)
         onlyOwner {
@@ -325,8 +323,7 @@ contract VendorContract is Ownable {
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
 
         require(uint32(block.timestamp) < v.ackTimelock, "The ack timelock has expired");
-        // require(msg.value == _bounty, "Value sent does not match the input bounty");
-        require(balanceOwner > _bounty);
+        require(balanceOwner > _bounty, "Available balance not enough to fund the bounty");
 
         v.state = State.Acknowledged;
         
@@ -360,7 +357,7 @@ contract VendorContract is Ownable {
      */
 
     function withdraw(uint _amount) external onlyOwner {
-        require(balanceOwner >= _amount);
+        require(balanceOwner >= _amount, "Funds not available");
         balanceOwner -= _amount;
         payable(owner()).transfer(_amount);
     }
