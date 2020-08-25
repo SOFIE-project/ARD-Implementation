@@ -3,8 +3,19 @@ pragma solidity ^0.6.0;
 //import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
+
+/**
+    @title VendorContract
+    @notice This contract reflects the Vendor in the ARD process. Inherits from OpenZeppelin Ownable
+ */
 contract VendorContract is Ownable {
 
+
+    /**
+        @notice The constructor of the contract expects the EOA vendor address to transfer the ownership to, and the address the Authority smart contract
+        @param _vendor The address of the vendor EOA
+        @param _authority The address of the AuthorityContract
+     */
     constructor(address _vendor, address _authority) public {
 
         authority = _authority;
@@ -106,15 +117,14 @@ contract VendorContract is Ownable {
     // External methods (callable only by Authority contract)
 
     /**
-     * @dev The function is called by the vulnerability authority to set up a new vulnerability contract.
-     *
-     * @param vulnerabilityId The identifier of the vulnerability
-     * @param _expert The expert address
-     * @param _productId The id of the product
-     * @param _vulnerabilityHash The hash of the vulnerability data
-     * @param _hashlock The secret hash used also for the hashlock (sha-2 sha256).
-     */
-
+        @notice The function is called by the Authority to set up a new vulnerability record
+        @param vulnerabilityId The vulnerability identifier, bytes32
+        @param _expert The Expert address
+        @param _productId The id of the product, bytes32
+        @param _vulnerabilityHash The hash of the vulnerability data, bytes32
+        @param _hashlock The hashlock, bytes32
+        @dev Only the authority
+    */
     function newVulnerability (
         bytes32 vulnerabilityId,
         address payable _expert,
@@ -149,12 +159,11 @@ contract VendorContract is Ownable {
     }
 
     /**
-     * @dev The authority set the state of vulnerability
-     *
-     * @param _vulnerabilityId The identifier of the vulnerability
-     * @param _state The state of the vulnerability
-     */
-
+        @notice Set the state of the vulnerability in the ARD process
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _state The state to set
+        @dev Only the authority
+    */
     function setState(bytes32 _vulnerabilityId, State _state) external onlyAuhtority {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
@@ -162,26 +171,23 @@ contract VendorContract is Ownable {
     }
 
     /**
-     * @dev The authority set the state of the reward
-     *
-     * @param _vulnerabilityId The identifier of the vulnerability
-     * @param _rewState The state of the reward
-     */
-
+        @notice Set the state of the reward
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _rewState The state to set
+        @dev Only the authority
+    */
     function setRewardState(bytes32 _vulnerabilityId, RewardState _rewState) external onlyAuhtority {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
         v.reward.state = _rewState;
     }
 
-     /**
-     * @dev The authority set the timelocks of the vulnerability
-     *
-     * @param _vulnerabilityId The identifier of the vulnerability
-     * @param _ackTimelock The new ack timelock of the vulnerability
-     * @param _timelock The new timelock of the vulnerability
-     */
-
+    /**
+        @notice Set the timelock
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _timelock The new timelock in UNIX epoch time
+        @dev Only the authority
+    */
     function setTimelock(bytes32 _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock) external onlyAuhtority {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
@@ -192,12 +198,11 @@ contract VendorContract is Ownable {
     }
 
     /**
-     * @dev The authority set the secret of the vulnerability
-     *
-     * @param _vulnerabilityId The identifier of the vulnerability
-     * @param _secret The secret of the vulnerability
-     */
-
+        @notice Set the secret
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _secret The hashlock preimage, uint
+        @dev Only the authority
+    */
     function setSecret(bytes32 _vulnerabilityId,uint _secret) external onlyAuhtority {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
@@ -206,13 +211,12 @@ contract VendorContract is Ownable {
         v.secret = _secret;
     }
 
-     /**
-     * @dev The authority set the location (URL) of the vulnerability
-     *
-     * @param _vulnerabilityId The identifier of the vulnerability
-     * @param _location The locaction of the vulnerability
-     */
-
+    /**
+        @notice Set the location of the vulnerability information
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _location The location to disclose the vulnerability, string
+        @dev Only the authority
+    */
     function setLocation(bytes32 _vulnerabilityId,string calldata _location) external onlyAuhtority {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
@@ -220,11 +224,12 @@ contract VendorContract is Ownable {
     }
 
     /**
-     * @dev The authority cancels the vulnerability bounty (e.g the expert cheated)
-     *
-     * @param _vulnerabilityId The identifier of the vulnerability
-     * @param _motivation The motivation why vulnerability has been deleted
-     */
+        @notice Cancel the bounty assigned to a vulnerability
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _motivation The motivation why vulnerability has been deleted, string
+        @dev Emits LogBountyCanceled(bytes32 indexed vulnerabilityId, string motivation)
+        @dev Only the authority
+    */
     function cancelBounty(bytes32 _vulnerabilityId, string calldata _motivation) external onlyAuhtority {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
@@ -239,12 +244,11 @@ contract VendorContract is Ownable {
         emit LogBountyCanceled(_vulnerabilityId, _motivation);
     }
 
-     /**
-     * @dev The authority pay the bounty to the expert
-     *
-     * @param _vulnerabilityId The identifier of the vulnerability
-     */
-
+    /**
+        @notice Pay the bounty to the researcher of a vulnerability
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @dev Only the authority
+    */
      function payBounty(bytes32 _vulnerabilityId) external onlyAuhtority {
         // Checks done by the Authority.withdrawBounty function
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
@@ -258,12 +262,13 @@ contract VendorContract is Ownable {
 
     // Public methods callable only by the Owner (the vendor)
 
-    /**
-     * @dev The Vendor registers a product
-     *
-     * @param _productName The product name
-     */
 
+    /**
+        @notice Register a product in the contract
+        @param _productName The product name, string
+        @dev Emits ProductRegistered(bytes32 indexed _productId)
+        @dev Only the owner
+    */
      function registerProduct(string calldata _productName) onlyOwner external {
 
          bytes32 _productId = keccak256(
@@ -288,11 +293,11 @@ contract VendorContract is Ownable {
     }
 
     /**
-     * @dev The Vendor unregisters a product
-     *
-     * @param _productId The product identifier
-     */
-
+        @notice Unregister a product in the contract
+        @param _productId The id of the product, bytes32
+        @dev Emits ProductUnregistered(bytes32 indexed _productId)
+        @dev Only the owner
+    */
     function unregisterProduct(bytes32 _productId) onlyOwner external {
 
         require(productIsRegistered(_productId));
@@ -307,13 +312,13 @@ contract VendorContract is Ownable {
 
 
 
-     /**
-     * @dev The vendor acknowledges the vulnerability and set the ETH as a reward for the expert.
-     *
-     * @param _vulnerabilityId The condract identifier.
-     * @param _bounty The bounty in ETH.
-     */
-
+    /**
+        @notice Acknowledge the vulnerability and set a bounty as a reward
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _bounty The reward to the Researcher
+        @dev Emits LogVulnerabilityAcknowledgment(bytes32 indexed vulnerabilityId, address indexed vendor, uint bounty)
+        @dev Only the owner, _vulnerabilityId exists and it is valid, and the contract has sufficient funds for the bounty
+    */
     function acknowledge(bytes32 _vulnerabilityId, uint _bounty)
         public
         vulnerabilityExists(_vulnerabilityId)
@@ -335,11 +340,11 @@ contract VendorContract is Ownable {
     }
 
     /**
-     * @dev The vendor provides a patch to the vulnerability.
-     *
-     * @param _vulnerabilityId The condract identifier.
-     */
-
+        @notice Set the vulnerability as patched
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @dev Emits LogVulnerabilityPatch(bytes32 indexed vulnerabilityId, address indexed vendor)
+        @dev Only the owner, _vulnerabilityId exists and it is acknowledged
+    */
     function patch(bytes32 _vulnerabilityId) public vulnerabilityExists(_vulnerabilityId) onlyOwner {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
@@ -351,11 +356,10 @@ contract VendorContract is Ownable {
     }
 
     /**
-    * @dev The vendor withdraw ETH from the contract.
-     *
-     * @param _amount The amount to withdraw
-     */
-
+        @notice Allow the owner to withdraw some funds
+        @param _amount The amount to withdraw, uint
+        @dev Only the owner
+    */
     function withdraw(uint _amount) external onlyOwner {
         require(balanceOwner >= _amount, "Funds not available");
         balanceOwner -= _amount;
@@ -365,6 +369,14 @@ contract VendorContract is Ownable {
 
     // Getter and Utility
 
+    /**
+        @notice Get a product by the array index
+        @param idx The index of the product, uint
+        @return productName The name the product, string
+        @return registeredSince The timestamp of the registration date of the vendor
+        @return unregisteredSince The timestamp of the unregistration date of the vendor (0 if still registered)
+        @return registered True if the vendor is registered, false otherwise
+    */
     function getProductyIdx(uint idx) public view returns(
         string memory productName,
         uint32 registeredSince,
@@ -377,6 +389,15 @@ contract VendorContract is Ownable {
         return (p.productName,p.registeredSince,p.unregisteredSince,p.registered);
      }
 
+
+    /**
+        @notice Get a product by its Id
+        @param _productId The index of the product, uint
+        @return productName The name the product, string
+        @return registeredSince The timestamp of the registration date of the vendor
+        @return unregisteredSince The timestamp of the unregistration date of the vendor (0 if still registered)
+        @return registered True if the vendor is registered, false otherwise
+    */
     function getProductById(bytes32 _productId) public view returns(
         string memory productName,
         uint32 registeredSince,
@@ -387,6 +408,12 @@ contract VendorContract is Ownable {
         return (p.productName,p.registeredSince,p.unregisteredSince,p.registered);
      }
 
+
+    /**
+        @notice Check whether a product exists
+        @param _productId The id of the product, bytes32
+        @return exists True if the product exists, false otherwise
+    */
       function productExist(bytes32 _productId)
         internal
         view
@@ -396,6 +423,11 @@ contract VendorContract is Ownable {
         exists=( bytes(pname).length != 0);
     }
 
+    /**
+        @notice Check whether a product is registered
+        @param _productId The id of the product, bytes32
+        @return registered True if the product is registered, false otherwise
+    */
     function productIsRegistered(bytes32 _productId)
         internal
         view
@@ -406,6 +438,17 @@ contract VendorContract is Ownable {
     }
 
 
+    /**
+        @notice Get the information of a vulnerability
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @return The researcher address, 
+        @return The state of the vulnerability in the process, uint8
+        @return The hashlock, bytes32
+        @return The timelock, uint32
+        @return The secret, uint
+        @return The vulnerability location, string
+        @dev The reason the get function has been split is due to StackTooDeep Exception
+    */
     function getVulnerabilityInfo(bytes32 _vulnerabilityId) external view returns(
         address ,
         State ,
@@ -420,7 +463,14 @@ contract VendorContract is Ownable {
         return(address(v.expert), v.state, v.hashlock, v.timelock, v.ackTimelock, v.secret, v.vulnerabilityLocation);
     }
 
-
+    /**
+        @notice Get the metadata of a vulnerability
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @return timestamp The creation timestamp, uint32 
+        @return productId The id of the product involved, uint32
+        @return vulnerabilityHash The hash of the vulnerability data, bytes32
+        @dev The reason the get function has been split is due to StackTooDeep Exception
+    */
     function getVulnerabilityMetadata (bytes32 _vulnerabilityId) external view returns(
         uint32 timestamp,
         bytes32 productId,
@@ -430,15 +480,24 @@ contract VendorContract is Ownable {
         return(v.metadata.timestamp, v.metadata.productId, v.metadata.vulnerabilityHash);
     }
 
+    /**
+        @notice Get the reward data of a vulnerability
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @return _state The reward state,uint8
+        @return _amount The reward amount, uint
+        @dev The reason the get function has been split is due to StackTooDeep Exception
+    */
     function getVulnerabilityReward (bytes32 _vulnerabilityId) external view returns(RewardState _state, uint _amount){
 
         Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
         return(v.reward.state,v.reward.amount);
     }
 
-      /**
-     * @dev Is there a contract with id _vulnerabilityId.
-     * @param _vulnerabilityId Id into Vulnerabilities mapping.
+
+    /**
+        @dev Check if a vulnerability id exists
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @return exists True if the vulnerability exists, false otherwise
      */
     function haveVulnerability(bytes32 _vulnerabilityId)
         internal
@@ -447,7 +506,10 @@ contract VendorContract is Ownable {
         exists = (Vulnerabilities[_vulnerabilityId].expert != address(0));
     }
 
-    // Receive function to fund the contract
+    /**
+        @dev The solidity > 0.6 keyword function to receive ether
+        @dev Only by the Owner
+    */
     receive() external payable onlyOwner {
         balanceOwner += msg.value;
     }

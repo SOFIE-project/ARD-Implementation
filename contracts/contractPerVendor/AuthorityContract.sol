@@ -8,17 +8,20 @@ import "./VendorFactory.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
- * @title VulnerabilityRegistry
- *
- * @notice This contract supports responsible disclosure of vulnerabilities. For each vulnerability a state machine identifies the stage of the responsible disclosure process
- *
+    @title AuthorityContract
+    @notice This contract reflects the Authority in the ARD process. Inherits from OpenZeppelin Ownable
  */
-
 contract AuthorityContract is Ownable {
 
     address public interledger;
     VendorFactory public factory;
 
+
+    /**
+        @notice The constructor of the contract expects the Interledger address and the address of a VendorFactory contract
+        @param _interledger The address of the interledger component
+        @param _factory The address of a VendorFactory contract
+     */
     constructor(address _interledger, VendorFactory _factory) public {
 
         interledger = _interledger;
@@ -119,11 +122,11 @@ contract AuthorityContract is Ownable {
      */
 
     /**
-     * @dev The Authority register a Vendor
-     *
-     * @param _vendor The vendor address (EOA)
-     */
-
+        @notice Register a new vendor, i.e. create a new VendorContract through the Factory
+        @param _vendor The address of vendor EOA to register (and owner of the VendorContract)
+        @dev Emits an event VendorRegistered(address indexed _vendor, address _vendorContract) with the address of the vendor and the new VendorContract respectively
+        @dev Only the Authority owner
+     */     
     function registerVendor(address _vendor) onlyOwner external {
 
         require(!vendorExist(_vendor), "This vendor already exists");
@@ -144,11 +147,11 @@ contract AuthorityContract is Ownable {
     }
 
     /**
-     * @dev The Authority unregisters a Vendor
-     *
-     * @param _vendor The vendor address
-     */
-
+        @notice Un-register a vendor
+        @param _vendor The address of vendor EOA to un-register
+        @dev Emits an event VendorUnregistered(address indexed _vendor) with the address of the vendor EOA
+        @dev Only the Authority owner
+     */     
     function unregisterVendor(address _vendor) onlyOwner external {
 
         require(vendorIsRegistered(_vendor),"This vendor is already unregistered");
@@ -160,12 +163,14 @@ contract AuthorityContract is Ownable {
         emit VendorUnregistered(_vendor);
     }
 
-   /**
-     * @dev Get vendor by index
-     *
-     * @param idx THe position of vendor in the array vendorIndex
-     */
-
+    /**
+        @notice Get the vendor data record given its id
+        @param idx The index (uint) of the vendor to read
+        @return _contract The address of the associated VendorContract
+        @return registeredSince The timestamp of the registration date of the vendor
+        @return unregisteredSince The timestamp of the unregistration date of the vendor (0 if still registered)
+        @return registered True if the vendor is registered, false otherwise
+     */     
     function getVendorRecordByIdx(uint idx) public view returns(
         VendorContract _contract,
         uint32 registeredSince,
@@ -180,6 +185,12 @@ contract AuthorityContract is Ownable {
      }
 
 
+    /**
+        @notice Check if a vendor exists, i.e. they have a VendorContract associated
+        @param _vendor The vendor EOA
+        @return exists True if the vendor has a contract, false otherwise
+        @dev Internal function
+     */     
     function vendorExist(address _vendor)
         internal
         view
@@ -189,6 +200,12 @@ contract AuthorityContract is Ownable {
 
     }
 
+    /**
+        @notice Check if a vendor is regitered
+        @param _vendor The vendor EOA
+        @return registered True if the vendor is registered, false otherwise
+        @dev Internal function
+     */     
     function vendorIsRegistered(address _vendor)
         internal
         view
@@ -206,17 +223,15 @@ contract AuthorityContract is Ownable {
      */
 
     /**
-     * @dev The resercher sets up a new vulnerability contract.
-     *
-     * @param _vendor The Vendor address, the owner of the vulnerable device
-     * @param _hashlock The secret hash used also for the hashlock (sha-2 sha256).
-     * @param _productId The id of the product
-     * @param _vulnerabilityHash The hash of the vulnerability data
-     *
-     * @return _vulnerabilityId Id of the new contract. This is needed for subsequent calls.
-     */
-
-
+        @notice The resercher sets up a new vulnerability record
+        @param _vendor The Vendor EOA address, the owner of the vulnerable device
+        @param _hashlock The hashlock, bytes32
+        @param _productId The id of the product, bytes32
+        @param _vulnerabilityHash The hash of the vulnerability data, bytes32
+        @return _vulnerabilityId Id of the new contract. This is needed for subsequent calls
+        @dev If positive, emits LogVulnerabilityNew(bytes32 indexed vulnerabilityId, address indexed researcher, address indexed vendor, bytes32 hashlock, bytes32 vulnerabilityHash)
+        @dev Reverts if the generated vulnerability id already exists
+    */  
     function registerVulnerability(address _vendor, bytes32 _hashlock,
                                 bytes32 _productId, bytes32 _vulnerabilityHash)
         external
@@ -270,13 +285,14 @@ contract AuthorityContract is Ownable {
     }
 
     /**
-     * @dev The authority approves the vulnerability contract and provides the lock terms.
-     *
-     * @param _vulnerabilityId The condract identifier
-     * @param _ackTimelock UNIX epoch in seconds to acknowledge
-     * @param _timelock UNIX epoch in seconds time that lock expires at
-     * @param _decision The approval decision flag
-     * @param _motivation The motivation string
+        @notice Approves, or not, the vulnerability contract and provides the lock terms.
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _ackTimelock UNIX epoch in seconds the vendor has to acknowledge
+        @param _timelock The timelock in UNIX epoch time
+        @param _decision The approval decision flag
+        @param _motivation The motivation string
+        @dev Emits LogVulnerabilityApproval(bytes32 indexed vulnerabilityId, uint32 timelock, VendorContract.State state, string motivation)
+        @dev Only the Authority owner, _vulnerabilityId exists
      */
     function approve(bytes32 _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock, ApprovedType _decision, string memory _motivation)
         public
@@ -317,12 +333,12 @@ contract AuthorityContract is Ownable {
 
     }
 
- /**
-     * @dev Called by who knows the secret (the expert or the authority).
-     * This will allow the expert to withdraw the bounty.
-     *
-     * @param _vulnerabilityId Id of the VulnerabilityContract.
-     * @param _secret The preimage of the hashlock
+    /**
+        @notice Publish the secret after the secret if the disclosable condition is met. Pay the bounty
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _secret The preimage of the hashlock, uint
+        @dev Emits LogVulnerabilitySecret(bytes32 indexed vulnerabilityId, uint secret)
+        @dev The secret mathces the hashlock, _vulnerabilityId exists and the vulnerability is disclosable
      */
     function publishSecret(bytes32 _vulnerabilityId, uint _secret)
         external
@@ -348,12 +364,13 @@ contract AuthorityContract is Ownable {
             vendorContract.payBounty(_vulnerabilityId);
     }
 
-     /**
-     * @dev Called by interledger (the expert or the authority).
-     * This will allow the expert to withdraw the bounty.
-     *
-     * @param _vulnerabilityId Id of the VulnerabilityContract.
-     * @param _vulnerabilityLocation The preimage of the hashlock
+    /**
+        @notice Disclose the vulnerability data location
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _vulnerabilityLocation The location to disclose the vulnerability, string
+        @return success True if the function terminates
+        @dev Emits LogVulnerabilityDisclose(bytes32 indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation)
+        @dev Only the interledger component, _vulnerabilityId exists
      */
     function disclose(bytes32 _vulnerabilityId, string calldata _vulnerabilityLocation)
         external
@@ -387,10 +404,10 @@ contract AuthorityContract is Ownable {
 
 
     /**
-     * @dev Cancels the vulnerability bounty
-     *
-     * @param _vulnerabilityId The identifier of the vulnerability
-     * @param _motivation The motivation why vulnerability has been deleted
+        @notice Cancels the vulnerability bounty
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _motivation The motivation why vulnerability has been deleted, string
+        @dev Only the owner, _vulnerabilityId exists
      */
     function cancelBounty(bytes32 _vulnerabilityId, string calldata _motivation) external onlyOwner {
 
@@ -401,8 +418,10 @@ contract AuthorityContract is Ownable {
     }
 
     /**
-     * @dev Is there a contract with id _vulnerabilityId.
-     * @param _vulnerabilityId Id into Vulnerabilities mapping.
+        @notice Check if a vulnerability id exists
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @return exists True if _vulnerabilityId exists, false otherwise
+        @dev Internal function
      */
     function haveVulnerability(bytes32 _vulnerabilityId)
         internal
@@ -412,8 +431,9 @@ contract AuthorityContract is Ownable {
     }
 
     /**
-     * @dev Is the input contract disclosable
-     * @param _vulnerabilityId Contract identifier
+        @notice Check if a vulnerability is disclosable
+        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @return True if _vulnerabilityId can be disclosed, false otherwise exists, false otherwise
      */
     function isDisclosable(bytes32 _vulnerabilityId) public view returns(bool) {
 
