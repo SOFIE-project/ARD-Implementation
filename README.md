@@ -7,7 +7,7 @@
 The smart contract VulnerabilityRegistry stores records of IT security vulnerabilities. A state machine identifies the state of progress of a particular vulnerability, from its creation to its resolution. This provides a transparent, immutable and decentralized support to the responsible disclosure process.
 
 The actors in our scenario are:
-- The Researcher, who discovers and stores a new vulnerability record
+- The Expert, who discovers and stores a new vulnerability record
 - The Authority, who accepts, or refuses, a vulnerability record
 - The Vendor, the organization suffering of the vulnerability
 
@@ -15,12 +15,15 @@ The actors in our scenario are:
 
 ![State machine](./images/StateMachine.png)
 Each circle represents the State of a single vulnerability. For each transition, in **bold** is shown the high level event, in *italic* the corresponding smart contract function.
-The Authority deploys the smart contract. A Researcher uploads an entry consisting of  {vendorAddress, hashlock, metadata}, and the contract creates a new vulnerability record . A vulnerability is approved (or not) by the Authority, which sets the timelock. The Vendor may acknowledge and provide a patch for the vulnerability within the timelock. The condition to disclose a vulnerability V is the following:
-- (V.State == Valid OR Acknowledged) AND V.Timelock.Expired
-- OR
-- V.State == Patched
+The Authority deploys the smart contract. An Expert uploads a bundle consisting of {vendorAddres, productId, hashlock, vulnerabilityHash}, and the contract creates a new vulnerability record. A vulnerability is approved (or not) by the Authority, which sets the timelock. The Vendor may acknowledge and provide a patch for the vulnerability within the timelock. The condition to disclose a vulnerability V is the following:
 
-The disclosure consists of two phases: publishing the secret (Disclosable), and fully disclose the vulnerability data (Disclosed). The current smart contract also stores a reward for the researcher that can be collected by them at any moment after the secret  has been published (V.State == Disclosed). The reward amount is set by the Vendor at acknowledgeVulnerability.
+- (V.State == Valid AND V.AckTimelock.Expired)
+- OR
+- (V.State == Acknowledged AND V.Timelock.Expired)
+- OR
+- (V.State == Patched)
+
+The disclosure consists of two phases: publishing the secret (Disclosable), and fully disclose the vulnerability data (Disclosed). The current smart contract also stores a reward for the Expert that can be collected by them at any moment after the secret  has been published (V.State == Disclosed). The reward amount is set by the Vendor at acknowledgeVulnerability.
 
 ## Structure of the folders
 
