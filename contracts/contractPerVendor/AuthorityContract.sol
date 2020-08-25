@@ -271,9 +271,10 @@ contract AuthorityContract is Ownable {
     /**
      * @dev The authority approves the vulnerability contract and provides the lock terms.
      *
-     * @param _timelock UNIX epoch seconds time that  lock expires at.
-     * @param _vulnerabilityId The condract identifier.
-     * @param _decision The approval parameter.
+     * @param _vulnerabilityId The condract identifier
+     * @param _ackTimelock UNIX epoch in seconds to acknowledge
+     * @param _timelock UNIX epoch in seconds time that lock expires at
+     * @param _decision The approval decision flag
      * @param _motivation The motivation string
      */
     function approve(bytes32 _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock, ApprovedType _decision, string memory _motivation)

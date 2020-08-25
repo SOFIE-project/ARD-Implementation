@@ -104,7 +104,6 @@ contract AuthorityContract is Ownable {
         @param _vulnerabilityHash The hash of the vulnerability data, bytes32
         @return _vulnerabilityId Id of the new contract. This is needed for subsequent calls
         @dev If positive, emits LogVulnerabilityNew(bytes32 indexed vulnerabilityId, address indexed researcher, address indexed vendor, bytes32 hashlock, bytes32 vulnerabilityHash)
-        @dev If duplicate (_vulnerabilityHash already present), emits LogVulnerabilityDuplicate(bytes32 indexed vulnerabilityId, address indexed vendor, uint32 timestamp, bytes32 productId, bytes32 vulnerabilityHash, VendorContract.State state)
         @dev Reverts if the generated vulnerability id already exists
     */  
     function registerVulnerability(address _vendor, bytes32 _hashlock,
@@ -116,9 +115,11 @@ contract AuthorityContract is Ownable {
     /**
         @notice Approves, or not, the vulnerability contract and provides the lock terms.
         @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _ackTimelock UNIX epoch in seconds the vendor has to acknowledge
         @param _timelock The timelock in UNIX epoch time
-        @param _approved True if the vulnerability has to be approved, false otherwise
-        @dev Emits LogVulnerabilityApproval(bytes32 indexed vulnerabilityId, uint32 timelock, VendorContract.State state)
+        @param _decision The approval decision flag
+        @param _motivation The motivation string
+        @dev Emits LogVulnerabilityApproval(bytes32 indexed vulnerabilityId, uint32 timelock, VendorContract.State state, string motivation)
         @dev Only the Authority owner, _vulnerabilityId exists
      */
     function approve(bytes32 _vulnerabilityId, uint32 _timelock, bool _approved) public { }
