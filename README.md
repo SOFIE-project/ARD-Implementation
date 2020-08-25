@@ -59,7 +59,10 @@ The ARD flow is the following:
 
 ## TODO
 
-- [ ] Write the tests for the smart contract
+- [X] Write the tests for the smart contract
+- [X] Update contract's documentation
+- [ ] Clean code
+
 
 ## Requirements
 

@@ -103,7 +103,7 @@ contract AuthorityContract is Ownable {
         @param _productId The id of the product, bytes32
         @param _vulnerabilityHash The hash of the vulnerability data, bytes32
         @return _vulnerabilityId Id of the new contract. This is needed for subsequent calls
-        @dev If positive, emits LogVulnerabilityNew(bytes32 indexed vulnerabilityId, address indexed researcher, address indexed vendor, bytes32 hashlock, bytes32 vulnerabilityHash)
+        @dev If positive, emits LogVulnerabilityNew(bytes32 indexed vulnerabilityId, address indexed expert, address indexed vendor, bytes32 hashlock, bytes32 vulnerabilityHash)
         @dev Reverts if the generated vulnerability id already exists
     */  
     function registerVulnerability(address _vendor, bytes32 _hashlock,
@@ -196,7 +196,7 @@ contract VendorContract is Ownable {
     /**
         @notice The function is called by the Authority to set up a new vulnerability record
         @param vulnerabilityId The vulnerability identifier, bytes32
-        @param _researcher The Resercher address
+        @param _expert The Expert address
         @param _productId The id of the product, bytes32
         @param _vulnerabilityHash The hash of the vulnerability data, bytes32
         @param _hashlock The hashlock, bytes32
@@ -204,7 +204,7 @@ contract VendorContract is Ownable {
     */
     function newVulnerability (
         bytes32 vulnerabilityId,
-        address payable _researcher,
+        address payable _expert,
         bytes32 _productId,
         bytes32 _vulnerabilityHash,
         bytes32 _hashlock) external { }
@@ -266,7 +266,7 @@ contract VendorContract is Ownable {
 
 
     /**
-        @notice Pay the bounty to the researcher of a vulnerability
+        @notice Pay the bounty to the expert of a vulnerability
         @param _vulnerabilityId The vulnerability identifier, bytes32
         @dev Only the authority
     */
@@ -294,7 +294,7 @@ contract VendorContract is Ownable {
     /**
         @notice Acknowledge the vulnerability and set a bounty as a reward
         @param _vulnerabilityId The vulnerability identifier, bytes32
-        @param _bounty The reward to the Researcher
+        @param _bounty The reward to the expert
         @dev Emits LogVulnerabilityAcknowledgment(bytes32 indexed vulnerabilityId, address indexed vendor, uint bounty)
         @dev Only the owner, _vulnerabilityId exists and it is valid, and the contract has sufficient funds for the bounty
     */
@@ -360,7 +360,7 @@ contract VendorContract is Ownable {
     /**
         @notice Check whether a product is registered
         @param _productId The id of the product, bytes32
-        @return exists True if the product is registered, false otherwise
+        @return registered True if the product is registered, false otherwise
     */
     function productIsRegistered(bytes32 _productId) internal view returns (bool registered) { }
 
@@ -368,7 +368,7 @@ contract VendorContract is Ownable {
     /**
         @notice Get the information of a vulnerability
         @param _vulnerabilityId The vulnerability identifier, bytes32
-        @return The researcher address, 
+        @return The expert address, 
         @return The state of the vulnerability in the process, uint8
         @return The hashlock, bytes32
         @return The timelock, uint32
