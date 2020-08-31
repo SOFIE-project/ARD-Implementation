@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
     @title AuthorityContract
     @notice This contract reflects the Authority in the ARD process. Inherits from OpenZeppelin Ownable
  */
-contract AuthorityContract is Ownable {
+contract AuthorityContract is Ownable, InterledgerSenderInterface {
 
     address public interledger;
     VendorFactory public factory;
@@ -48,7 +48,7 @@ contract AuthorityContract is Ownable {
         string motivation
     );
 
-    event LogVulnerabilitySecret(uint indexed vulnerabilityId, uint secret);
+    // event LogVulnerabilitySecret(uint indexed vulnerabilityId, uint secret);
     event LogVulnerabilityDisclose(uint indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation);
     event VendorRegistered(address indexed vendor, address vendorContract);
     event VendorUnregistered(address indexed vendor);
@@ -111,7 +111,6 @@ contract AuthorityContract is Ownable {
     address[] public vendorIndex;      // The array provides a list of the vendor address, not possible to retrieve it from a mapping
 
     mapping(uint => address) public VendorVulnerabilities; // map vulnerabilityId to vendor
-    // bytes32[] public vulnerabilityIndex; // The array provides a list of vulnerabilityId to easy retrive them all
 
     uint ID;
 
@@ -244,16 +243,6 @@ contract AuthorityContract is Ownable {
         // Create a new entry
         _vulnerabilityId = ID++;
 
-        // _vulnerabilityId = keccak256(
-        //     abi.encodePacked(
-        //         msg.sender,
-        //         _vendor,
-        //         _hashlock,
-        //         _productId,
-        //         _vulnerabilityHash
-        //     )
-        // );
-
         // Retrive VendorContract
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
@@ -273,7 +262,6 @@ contract AuthorityContract is Ownable {
 
 
         VendorVulnerabilities[_vulnerabilityId] = _vendor;
-        // vulnerabilityIndex.push(_vulnerabilityId);
 
         emit LogVulnerabilityNew(
             _vulnerabilityId,
@@ -340,7 +328,7 @@ contract AuthorityContract is Ownable {
         @notice Publish the secret after the secret if the disclosable condition is met. Pay the bounty
         @param _vulnerabilityId The vulnerability identifier, uint
         @param _secret The preimage of the hashlock, uint
-        @dev Emits LogVulnerabilitySecret(uint indexed vulnerabilityId, uint secret)
+        @dev Emits InterledgerEventSending(uint256 id, bytes data)
         @dev The secret mathces the hashlock, _vulnerabilityId exists and the vulnerability is disclosable
      */
     function publishSecret(uint _vulnerabilityId, uint _secret)
@@ -357,7 +345,8 @@ contract AuthorityContract is Ownable {
         vendorContract.setSecret(_vulnerabilityId, _secret);
         vendorContract.setState(_vulnerabilityId, VendorContract.State.Disclosable);
 
-        emit LogVulnerabilitySecret(_vulnerabilityId, _secret);
+        bytes memory secret_bytes = abi.encode(_secret);
+        emit InterledgerEventSending(_vulnerabilityId, secret_bytes);
 
         //Retrive rewardState
         (VendorContract.RewardState _rewardState, uint _amount) = vendorContract.getVulnerabilityReward(_vulnerabilityId);
@@ -369,37 +358,43 @@ contract AuthorityContract is Ownable {
 
     /**
         @notice Disclose the vulnerability data location
-        @param _vulnerabilityId The vulnerability identifier, uint
-        @param _vulnerabilityLocation The location to disclose the vulnerability, string
-        @return success True if the function terminates
+        @param id The vulnerability identifier, uint
+        @param data The location to disclose the vulnerability, bytes
+        @dev Inherited from InterledgerSenderInterface 
         @dev Emits LogVulnerabilityDisclose(uint indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation)
         @dev Only the interledger component, _vulnerabilityId exists
      */
-    function disclose(uint _vulnerabilityId, string calldata _vulnerabilityLocation)
-        external
-        vulnerabilityExists(_vulnerabilityId)
-        onlyInterledger
-        returns (bool success){
+    // function disclose(uint _vulnerabilityId, string calldata _vulnerabilityLocation)
+    function interledgerCommit(uint256 id, bytes memory data)   
+        override public
+        vulnerabilityExists(id)
+        onlyInterledger {
 
         // Retrive VendorContract
-        address _vendor = VendorVulnerabilities[_vulnerabilityId];
+        address _vendor = VendorVulnerabilities[id];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
         //Retrive rewardState
-        (,VendorContract.State state,,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        (,VendorContract.State state,,,,,) = vendorContract.getVulnerabilityInfo(id);
 
         //verify secret has been published
         require(state == VendorContract.State.Disclosable, "The state should be Disclosable");
 
-        vendorContract.setState(_vulnerabilityId, VendorContract.State.Disclosed);
-        vendorContract.setLocation(_vulnerabilityId, _vulnerabilityLocation);
+        string memory _vulnerabilityLocation = abi.decode(data, (string));
+        vendorContract.setState(id, VendorContract.State.Disclosed);
+        vendorContract.setLocation(id, _vulnerabilityLocation);
 
-        emit LogVulnerabilityDisclose(_vulnerabilityId, msg.sender, _vulnerabilityLocation);
-
-        success = true;
+        emit LogVulnerabilityDisclose(id, msg.sender, _vulnerabilityLocation);
 
     }
 
+    function interledgerCommit(uint256 id) override public {
+        revert("Missing implementation");
+    }
+
+    function interledgerAbort(uint256 id, uint256 reason) override public {
+        revert("Missing implementation");
+    }
 
     /**
         Cancel bounty
