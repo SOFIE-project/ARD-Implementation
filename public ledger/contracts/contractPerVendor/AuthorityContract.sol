@@ -23,7 +23,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface {
         @param _interledger The address of the interledger component
         @param _factory The address of a VendorFactory contract
      */
-    constructor(address _interledger, VendorFactory _factory) public {
+    constructor (address _interledger, VendorFactory _factory) public {
 
         interledger = _interledger;
         factory = _factory;
@@ -52,7 +52,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface {
     event LogVulnerabilityDisclose(uint indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation);
     event VendorRegistered(address indexed vendor, address vendorContract);
     event VendorUnregistered(address indexed vendor);
-
+    event AbortError(uint 256 id,uint256 reason)
     // Modifiers
 
     modifier onlyInterledger {
@@ -126,7 +126,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface {
         @param _vendor The address of vendor EOA to register (and owner of the VendorContract)
         @dev Emits an event VendorRegistered(address indexed _vendor, address _vendorContract) with the address of the vendor and the new VendorContract respectively
         @dev Only the Authority owner
-     */     
+     */
     function registerVendor(address _vendor) onlyOwner external {
 
         require(!vendorExist(_vendor), "This vendor already exists");
@@ -151,7 +151,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface {
         @param _vendor The address of vendor EOA to un-register
         @dev Emits an event VendorUnregistered(address indexed _vendor) with the address of the vendor EOA
         @dev Only the Authority owner
-     */     
+     */
     function unregisterVendor(address _vendor) onlyOwner external {
 
         require(vendorIsRegistered(_vendor),"This vendor is already unregistered");
@@ -170,7 +170,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface {
         @return registeredSince The timestamp of the registration date of the vendor
         @return unregisteredSince The timestamp of the unregistration date of the vendor (0 if still registered)
         @return registered True if the vendor is registered, false otherwise
-     */     
+     */
     function getVendorRecordByIdx(uint idx) public view returns(
         VendorContract _contract,
         uint32 registeredSince,
@@ -290,7 +290,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface {
         onlyOwner()
         futureTimelock(_ackTimelock,_timelock)
         vulnerabilityExists(_vulnerabilityId){
-        
+
         // Retrive VendorContract
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
@@ -303,10 +303,10 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface {
 
         if(_decision == ApprovedType.Invalid) 
             _newState = VendorContract.State.Invalid;
-        
+
         else if(_decision == ApprovedType.Duplicate)
             _newState = VendorContract.State.Duplicate;
-        
+
         else {
             vendorContract.setTimelock(_vulnerabilityId,_ackTimelock,_timelock);
             _newState = VendorContract.State.Valid;
@@ -336,7 +336,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface {
         vulnerabilityExists(_vulnerabilityId)
         disclosable(_vulnerabilityId)
         hashlockMatches(_vulnerabilityId, _secret){
-
+        
         // Retrive VendorContract
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
@@ -354,6 +354,15 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface {
             // Send the reward only if present
         if(_rewardState == VendorContract.RewardState.SET && _amount > 0)
             vendorContract.payBounty(_vulnerabilityId);
+    }
+
+    function TriggerLocationPublishment(uint _vulnerabilityId){
+        address _vendor = VendorVulnerabilities[_vulnerabilityId];
+        VendorContract vendorContract = vendorRecords[_vendor]._contract;
+        (,,,,,_secret,_location) = vendorContract.getVulnerabilityInfo(id);
+        if(_secret != 0  && _location=="")
+        {    bytes memory secret_bytes = abi.encode(_secret);
+            emit InterledgerEventSending(_vulnerabilityId, secret_bytes);}
     }
 
     /**
@@ -393,7 +402,9 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface {
     }
 
     function interledgerAbort(uint256 id, uint256 reason) override public {
-        revert("Missing implementation");
+        emit AbortError(id,reason)
+        //
+        //revert("Missing implementation");
     }
 
     /**
