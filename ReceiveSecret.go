@@ -85,17 +85,14 @@ func interledgerReceive(stub shim.ChaincodeStubInterface, args []string) error {
 	secretData = args[1]
 
 	//query collectionVulnerabilty via VulnerabilityChaincode
-
 	f = "readVulnerability"
-
 	chainCodeArgs := util.ToChaincodeArgs(f, secretData)
-    response := stub.InvokeChaincode("VulnerabilityChaincode", chainCodeArgs)
+	response := stub.InvokeChaincode("VulnerabilityChaincode", chainCodeArgs)
+	if response.Status != shim.OK {
+		return shim.Error(response.Message)
+	}
 
-    if response.Status != shim.OK {
-           return shim.Error(response.Message)
-    }
-
-    //else - what to return?
+    //else-decide how to disclose vulnerability
 
 	var items []SecretDataItem
 
