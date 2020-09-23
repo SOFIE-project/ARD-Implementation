@@ -6,13 +6,14 @@ pragma solidity ^0.6.0;
 import "./VendorContract.sol";
 import "./VendorFactory.sol";
 import "./InterledgerSenderInterface.sol";
+import "./InterledgerReceiverInterface.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 /**
     @title AuthorityContract
-    @notice This contract reflects the Authority in the ARD process. Inherits from OpenZeppelin Ownable
+    @notice This contract reflects the Authority in the ARD process. Inherits from OpenZeppelin Ownable, SOFIE InterledgerSenderInterface and InterledgerReceiverInterface
  */
-contract AuthorityContract is Ownable, InterledgerSenderInterface {
+contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerReceiverInterface {
 
     address public interledger;
     VendorFactory public factory;
@@ -52,7 +53,9 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface {
     event LogVulnerabilityDisclose(uint indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation);
     event VendorRegistered(address indexed vendor, address vendorContract);
     event VendorUnregistered(address indexed vendor);
-    event AbortError(uint 256 id,uint256 reason)
+    event InterledgerAbort(uint256 id, uint256 reason);
+    event InterledgerCommit(uint256 id);
+
     // Modifiers
 
     modifier onlyInterledger {
@@ -246,11 +249,11 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface {
         // Retrive VendorContract
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        // Reject if a contract already exists with the same parameters. The
-        // sender must change one of these parameters to create a new distinct
-        // contract.
-        if (haveVulnerability(_vulnerabilityId))
-            revert("Vulnerability already exists");
+        // // Reject if a contract already exists with the same parameters. The
+        // // sender must change one of these parameters to create a new distinct
+        // // contract.
+        // if (haveVulnerability(_vulnerabilityId))
+        //     revert("Vulnerability already exists");
 
 
         // Associate the contract with the vulnerability metadata
@@ -356,30 +359,31 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface {
             vendorContract.payBounty(_vulnerabilityId);
     }
 
-    function TriggerLocationPublishment(uint _vulnerabilityId){
-        address _vendor = VendorVulnerabilities[_vulnerabilityId];
-        VendorContract vendorContract = vendorRecords[_vendor]._contract;
-        (,,,,,_secret,_location) = vendorContract.getVulnerabilityInfo(id);
-        if(_secret != 0  && _location=="")
-        {    bytes memory secret_bytes = abi.encode(_secret);
-            emit InterledgerEventSending(_vulnerabilityId, secret_bytes);}
-    }
+    // function TriggerLocationPublishment(uint _vulnerabilityId){
+    //     address _vendor = VendorVulnerabilities[_vulnerabilityId];
+    //     VendorContract vendorContract = vendorRecords[_vendor]._contract;
+    //     (,,,,,_secret,_location) = vendorContract.getVulnerabilityInfo(id);
+    //     if(_secret != 0  && _location=="")
+    //     {    bytes memory secret_bytes = abi.encode(_secret);
+    //         emit InterledgerEventSending(_vulnerabilityId, secret_bytes);}
+    // }
 
     /**
-        @notice Disclose the vulnerability data location
-        @param id The vulnerability identifier, uint
-        @param data The location to disclose the vulnerability, bytes
-        @dev Inherited from InterledgerSenderInterface 
+        @dev Inherited from InterledgerReceiverInterface 
         @dev Emits LogVulnerabilityDisclose(uint indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation)
-        @dev Only the interledger component, _vulnerabilityId exists
+        @dev Only the interledger component
      */
-    // function disclose(uint _vulnerabilityId, string calldata _vulnerabilityLocation)
-    function interledgerCommit(uint256 id, bytes memory data)   
-        override public
-        vulnerabilityExists(id)
-        onlyInterledger {
+    function interledgerReceive(uint256 nonce, bytes memory data)   
+        override public onlyInterledger {
+
+        // Get the Id from the data field
+        uint id;
+        string memory location;
+        (id, location) = abi.decode(data, (uint256, string));
 
         // Retrive VendorContract
+        require(haveVulnerability(id), "vulnerabilityId does not exist");
+
         address _vendor = VendorVulnerabilities[id];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
@@ -389,22 +393,24 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface {
         //verify secret has been published
         require(state == VendorContract.State.Disclosable, "The state should be Disclosable");
 
-        string memory _vulnerabilityLocation = abi.decode(data, (string));
         vendorContract.setState(id, VendorContract.State.Disclosed);
-        vendorContract.setLocation(id, _vulnerabilityLocation);
+        vendorContract.setLocation(id, location);
 
-        emit LogVulnerabilityDisclose(id, msg.sender, _vulnerabilityLocation);
-
+        emit LogVulnerabilityDisclose(id, msg.sender, location);
+        emit InterledgerEventAccepted(nonce);
     }
 
+    // InterledgerSenderInterface methods
     function interledgerCommit(uint256 id) override public {
-        revert("Missing implementation");
+        emit InterledgerCommit(id);
+    }
+
+    function interledgerCommit(uint256 id, bytes memory data) override public {
+        emit InterledgerCommit(id);
     }
 
     function interledgerAbort(uint256 id, uint256 reason) override public {
-        emit AbortError(id,reason)
-        //
-        //revert("Missing implementation");
+        emit InterledgerAbort(id, reason);
     }
 
     /**
