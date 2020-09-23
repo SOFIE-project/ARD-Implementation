@@ -35,6 +35,7 @@ contract("AuthorityContract", function(accounts) {
     }
 
     const secret = 123;
+    const nonce = 1234;
     const hashlock = web3.utils.soliditySha3({type: 'uint', value: secret});
     const metadata = web3.utils.fromAscii(new String(13245678910)); // Random metadata in bytes32
     const bounty = web3.utils.toWei('1', 'ether');
@@ -185,16 +186,16 @@ contract("AuthorityContract", function(accounts) {
             assert.equal(info[0], expertAddress, "The vendor contract should store the vulnerability, and have expert field as" + expertAddress);
         });
     
-        it("Should NOT register a vulnerability already sent (producing the same Id)", async function() {
+        // it("Should NOT register a vulnerability already sent (producing the same Id)", async function() {
     
-            await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
+        //     await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
 
-            await truffleAssert.fails(
-                authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress}),
-                truffleAssert.ErrorType.REVERT,
-                "Vulnerability already exists" // String of the revert
-            );
-        });
+        //     await truffleAssert.fails(
+        //         authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress}),
+        //         truffleAssert.ErrorType.REVERT,
+        //         "Vulnerability already exists" // String of the revert
+        //     );
+        // });
     
     });
 
@@ -318,12 +319,13 @@ contract("AuthorityContract", function(accounts) {
             assert.equal(info[1], STATUS.Disclosable, "The status should be " + STATUS.Disclosable + " (Disclosable)");
             assert.isAtLeast(parseInt(expertBalance_after), parseInt(expertBalance_before), "The expert should gain the reward and thus have higher balance than before");
 
-            truffleAssert.eventEmitted(tx, 'LogVulnerabilitySecret', (ev) => {                
+            const secret_bytes = web3.eth.abi.encodeParameter('uint256', ''+secret);
+            truffleAssert.eventEmitted(tx, 'InterledgerEventSending', (ev) => {                
                 return (
-                        ev.vulnerabilityId == vulnerabilityId,
-                        ev.secret == secret
+                        ev.id == vulnerabilityId,
+                        ev.data == secret_bytes
                         );
-            }, 'LogVulnerabilitySecret event did not fire with correct parameters');
+            }, 'InterledgerEventSending event did not fire with correct parameters');
         });
 
         it("Should publish the secret: ackTimelock expired", async function() {
@@ -387,7 +389,7 @@ contract("AuthorityContract", function(accounts) {
 
 
 
-    describe("disclose()", function() {
+    describe("interledgerReceive() (disclose)", function() {
 
         let factory;
         let authority;
@@ -423,7 +425,8 @@ contract("AuthorityContract", function(accounts) {
 
             await authority.publishSecret(vulnerabilityId, secret, {from: expertAddress});
 
-            let tx = await authority.disclose(vulnerabilityId, vulnerabilityLocation, {from: interledgerAddress});
+            const data = web3.eth.abi.encodeParameters(['uint256', 'string'], [''+vulnerabilityId, vulnerabilityLocation]);
+            let tx = await authority.interledgerReceive(nonce, data, {from: interledgerAddress});
 
             const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
 
@@ -437,14 +440,21 @@ contract("AuthorityContract", function(accounts) {
                         ev.vulnerabilityLocation == vulnerabilityLocation
                         );
             }, 'LogVulnerabilityDisclose event did not fire with correct parameters');
+
+            truffleAssert.eventEmitted(tx, 'InterledgerEventAccepted', (ev) => {                
+                return (
+                        ev.nonce == nonce
+                        );
+            }, 'InterledgerEventAccepted event did not fire with correct parameters');
         });
         
         it("Should NOT fully disclose the vulnerability: invalid sender", async function() {
             
             await authority.publishSecret(vulnerabilityId, secret, {from: expertAddress});
 
+            const data = web3.eth.abi.encodeParameters(['uint256', 'string'], [''+vulnerabilityId, vulnerabilityLocation]);
             await truffleAssert.fails(
-                authority.disclose(vulnerabilityId, vulnerabilityLocation, {from: expertAddress}),
+                authority.interledgerReceive(nonce, data, {from: expertAddress}),
                 truffleAssert.ErrorType.REVERT,
                 "Not the interledger component" // String of the revert
             );
@@ -452,8 +462,9 @@ contract("AuthorityContract", function(accounts) {
 
         it("Should NOT fully disclose the vulnerability: invalid state", async function() {
 
+            const data = web3.eth.abi.encodeParameters(['uint256', 'string'], [''+vulnerabilityId, vulnerabilityLocation]);
             await truffleAssert.fails(
-                authority.disclose(vulnerabilityId, vulnerabilityLocation, {from: interledgerAddress}),
+                authority.interledgerReceive(nonce, data, {from: interledgerAddress}),
                 truffleAssert.ErrorType.REVERT,
                 "The state should be Disclosable" // String of the revert
             );
