@@ -86,13 +86,37 @@ func interledgerReceive(stub shim.ChaincodeStubInterface, args []string) error {
 
 	//query collectionVulnerabilty via VulnerabilityChaincode
 	f = "readVulnerability"
-	chainCodeArgs := util.ToChaincodeArgs(f, secretData)
-	response := stub.InvokeChaincode("VulnerabilityChaincode", chainCodeArgs)
+	chainCodeArgsVul := util.ToChaincodeArgs(f, secretData)
+	response := stub.InvokeChaincode("VulnerabilityChaincode", chainCodeArgsVul)
 	if response.Status != shim.OK {
 		return shim.Error(response.Message)
 	}
 
-    //else-decide how to disclose vulnerability
+
+	//we first invoke set-to-ipfs function to transfer vulnerability data to ipfs location, then invoke get-from-ipfs to get the hash, which we then suuply to emitVulnerability function in TransferVulnerability chaincode
+	else 
+	{
+		fSet="set-to-ipfs"
+		chainCodeArgsSet := util.ToChaincodeArgs(fSet, response)
+
+		returnValue := stub.InvokeChaincode("VulnerabilityLocation", chainCodeArgsSet)
+
+		if returnValue.Status != shim.OK {
+		return shim.Error(returnValue.Message)}
+
+		fGet="get-from-ipfs"
+		chainCodeArgsGet := util.ToChaincodeArgs(fGet)
+
+		hashToTransfer :=stub.InvokeChaincode("VulnerabilityLocation", chainCodeArgsGet)
+
+		if hashToTransfer.Status != shim.OK {
+		return shim.Error(hashToTransfer.Message)}
+
+		fSend="emitVulnerability"
+		chainCodeArgsSend := util.ToChaincodeArgs(fSend, hashToTransfer)
+		stub.InvokeChaincode("TransferVulnerability", chainCodeArgsSend)
+
+	}
 
 	var items []SecretDataItem
 
