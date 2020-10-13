@@ -25,7 +25,6 @@ contract VendorContract is Ownable {
     // Logs
 
     event LogVulnerabilityAcknowledgment(uint indexed vulnerabilityId, address indexed vendor, uint bounty);
-    event LogVulnerabilityPatch(uint indexed vulnerabilityId, address indexed vendor);
     event LogBountyCanceled(uint indexed vulnerabilityId, string motivation);
     event ProductRegistered(bytes32 indexed productId);
     event ProductUnregistered(bytes32 indexed productId);
@@ -67,7 +66,7 @@ contract VendorContract is Ownable {
 
     // States
 
-    enum State {Pending, Invalid, Valid, Duplicate, Acknowledged, Patched, Disclosable, Disclosed}
+    enum State {Pending, Invalid, Valid, Duplicate, Acknowledged, Disclosable, Disclosed}
     enum RewardState {NULL, SET, CANCELED, SENT}
 
 
@@ -339,21 +338,6 @@ contract VendorContract is Ownable {
         emit LogVulnerabilityAcknowledgment(_vulnerabilityId, msg.sender, _bounty);
     }
 
-    /**
-        @notice Set the vulnerability as patched
-        @param _vulnerabilityId The vulnerability identifier, uint
-        @dev Emits LogVulnerabilityPatch(uint indexed vulnerabilityId, address indexed vendor)
-        @dev Only the owner, _vulnerabilityId exists and it is acknowledged
-    */
-    function patch(uint _vulnerabilityId) public vulnerabilityExists(_vulnerabilityId) onlyOwner {
-
-        Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
-
-        require(v.state == State.Acknowledged, "The vulnerability has not been acknowledged");
-
-        v.state = State.Patched;
-        emit LogVulnerabilityPatch(_vulnerabilityId, msg.sender);
-    }
 
     /**
         @notice Allow the owner to withdraw some funds
@@ -505,6 +489,27 @@ contract VendorContract is Ownable {
         returns (bool exists) {
         exists = (Vulnerabilities[_vulnerabilityId].expert != address(0));
     }
+
+    /**
+        @dev Check if the timelock of a vulnerability expired
+        @param _vulnerabilityId The vulnerability identifier, uint
+        @return True if the timelock expired, false otherwise
+     */
+    function isTimelockExpired(uint _vulnerabilityId) public view returns(bool) {
+        Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
+        return block.timestamp > v.timelock;
+    }
+
+    /**
+        @dev Check if a vulnerability id can be patched, i.e. has been Acknowledged
+        @param _vulnerabilityId The vulnerability identifier, uint
+        @return True if the vulnerability state is Acknowledged, false otherwise
+     */
+     function canBePatched(uint _vulnerabilityId) public view returns(bool) {
+        Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
+        return v.state == State.Acknowledged;
+    }
+
 
     /**
         @dev The solidity > 0.6 keyword function to receive ether

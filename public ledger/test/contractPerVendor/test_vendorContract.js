@@ -16,9 +16,9 @@ contract("VendorContract", function(accounts) {
         Valid: 2,
         Duplicate: 3,
         Acknowledged: 4,
-        Patched: 5,
-        Disclosable: 6,
-        Disclosed: 7
+        // Patched: 5,
+        Disclosable: 5,
+        Disclosed: 6
     }
 
     const REWARDSTATE = {
@@ -210,10 +210,10 @@ contract("VendorContract", function(accounts) {
         it("setState()", async function() {
 
             // Any state
-            const tx = await vendor.setState(vulnerabilityId, STATUS.Patched, {from: authorityAddress});
+            const tx = await vendor.setState(vulnerabilityId, STATUS.Acknowledged, {from: authorityAddress});
 
             const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
-            assert.equal(info[1], STATUS.Patched, "The status should be " + STATUS.Patched + " (Patched)");
+            assert.equal(info[1], STATUS.Acknowledged, "The status should be " + STATUS.Acknowledged + " (Acknowledged)");
         });
 
         it("setRewardState()", async function() {
@@ -383,49 +383,49 @@ contract("VendorContract", function(accounts) {
     });   
 
 
-    describe("patch()", function() {
+    // describe("patch()", function() {
 
-        let vendor;
-        let productId;
+    //     let vendor;
+    //     let productId;
 
-        beforeEach(async function() {
+    //     beforeEach(async function() {
 
-            const timelock = Math.round(new Date() / 1000) + 100000;
-            const ackTimelock = Math.round(new Date() / 1000) + 10000;
+    //         const timelock = Math.round(new Date() / 1000) + 100000;
+    //         const ackTimelock = Math.round(new Date() / 1000) + 10000;
 
-            vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
-            const tx = await vendor.registerProduct(productName, {from: vendorAddress});
-            productId = tx["logs"][0].args.productId;
-            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, vulnerabilityHash, hashlock, {from: authorityAddress});
-            await web3.eth.sendTransaction({
-                from: vendorAddress,
-                to: vendor.address,
-                value: funds
-            });
+    //         vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
+    //         const tx = await vendor.registerProduct(productName, {from: vendorAddress});
+    //         productId = tx["logs"][0].args.productId;
+    //         await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, vulnerabilityHash, hashlock, {from: authorityAddress});
+    //         await web3.eth.sendTransaction({
+    //             from: vendorAddress,
+    //             to: vendor.address,
+    //             value: funds
+    //         });
 
-            await vendor.setState(vulnerabilityId, STATUS.Valid, {from: authorityAddress});
-            await vendor.setTimelock(vulnerabilityId, ackTimelock, timelock, {from: authorityAddress});
-        });
+    //         await vendor.setState(vulnerabilityId, STATUS.Valid, {from: authorityAddress});
+    //         await vendor.setTimelock(vulnerabilityId, ackTimelock, timelock, {from: authorityAddress});
+    //     });
 
-        it("Should patch the vulnerability", async function() {
+    //     it("Should patch the vulnerability", async function() {
 
-            await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+    //         await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
 
-            await vendor.patch(vulnerabilityId, {from: vendorAddress});
+    //         await vendor.patch(vulnerabilityId, {from: vendorAddress});
 
-            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
-            assert.equal(info[1], STATUS.Patched, "The state should be " + STATUS.PAtched + " (Patched)");
-        });
+    //         const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+    //         assert.equal(info[1], STATUS.Patched, "The state should be " + STATUS.PAtched + " (Patched)");
+    //     });
 
-        it("Should NOT patch the vulnerability: not acknowledged", async function() {
+    //     it("Should NOT patch the vulnerability: not acknowledged", async function() {
 
-            await truffleAssert.fails(
-                vendor.patch(vulnerabilityId, {from: vendorAddress}),
-                truffleAssert.ErrorType.REVERT,
-                "The vulnerability has not been acknowledged" // String of the revert
-            );
-        });
-    });  
+    //         await truffleAssert.fails(
+    //             vendor.patch(vulnerabilityId, {from: vendorAddress}),
+    //             truffleAssert.ErrorType.REVERT,
+    //             "The vulnerability has not been acknowledged" // String of the revert
+    //         );
+    //     });
+    // });  
 
     
     describe("withdraw()", function() {

@@ -32,27 +32,14 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
 
     // Logs
 
-    event LogVulnerabilityNew(
-        uint indexed vulnerabilityId,
-        address indexed expert,
-        address indexed vendor,
-        bytes32 hashlock,
-        bytes32 vulnerabilityHash
-    );
-
-
-    event LogVulnerabilityApproval(
-        uint indexed vulnerabilityId,
-        uint32 ackTimelock,
-        uint32 timelock,
-        VendorContract.State state,
-        string motivation
-    );
-
-    // event LogVulnerabilitySecret(uint indexed vulnerabilityId, uint secret);
+    event LogVulnerabilityNew(uint indexed vulnerabilityId, address indexed expert, address indexed vendor, bytes32 hashlock, bytes32 vulnerabilityHash    );
+    event LogVulnerabilityApproval(uint indexed vulnerabilityId, uint32 ackTimelock, uint32 timelock, VendorContract.State state, string motivation);
     event LogVulnerabilityDisclose(uint indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation);
+    event LogVulnerabilityPatched(uint indexed vulnerabilityId, bool patched, bool timelock_expired);
+
     event VendorRegistered(address indexed vendor, address vendorContract);
     event VendorUnregistered(address indexed vendor);
+    
     event InterledgerAbort(uint256 id, uint256 reason);
     event InterledgerCommit(uint256 id);
 
@@ -87,14 +74,6 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         require(_hashlock == keccak256(abi.encodePacked(_secret)),"Hashed secret and hashlock do not match");
         _;
     }
-
-    modifier disclosable(uint _vulnerabilityId) {
-
-        // Check the condition to disclose a vulnerability
-        require(isDisclosable(_vulnerabilityId), "This contract cannot be discolsed");
-        _;
-    }
-
 
     //Struct
 
@@ -249,13 +228,6 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         // Retrive VendorContract
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        // // Reject if a contract already exists with the same parameters. The
-        // // sender must change one of these parameters to create a new distinct
-        // // contract.
-        // if (haveVulnerability(_vulnerabilityId))
-        //     revert("Vulnerability already exists");
-
-
         // Associate the contract with the vulnerability metadata
         vendorContract.newVulnerability(_vulnerabilityId,
                                         payable(msg.sender),
@@ -275,7 +247,6 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         );
 
         return _vulnerabilityId;
-
     }
 
     /**
@@ -327,46 +298,50 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
 
     }
 
+
     /**
         @notice Publish the secret after the secret if the disclosable condition is met. Pay the bounty
         @param _vulnerabilityId The vulnerability identifier, uint
         @param _secret The preimage of the hashlock, uint
         @dev Emits InterledgerEventSending(uint256 id, bytes data)
+        @dev Emits LogVulnerabilityPatched(uint vulnerabilityId, bool patched, bool timelock_expired)
         @dev The secret mathces the hashlock, _vulnerabilityId exists and the vulnerability is disclosable
      */
     function publishSecret(uint _vulnerabilityId, uint _secret)
         external
         vulnerabilityExists(_vulnerabilityId)
-        disclosable(_vulnerabilityId)
-        hashlockMatches(_vulnerabilityId, _secret){
+        hashlockMatches(_vulnerabilityId, _secret) {
         
-        // Retrive VendorContract
+        // Retrive VendorContract and info
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        //Set secret and state
+        if(msg.sender == vendorContract.owner()) {
+
+            require(vendorContract.canBePatched(_vulnerabilityId), "The vulnerability can be patched only if previously Acknowledged");
+            emit LogVulnerabilityPatched(_vulnerabilityId, true, vendorContract.isTimelockExpired(_vulnerabilityId));
+        }
+        else {
+            require(isDisclosable(_vulnerabilityId), "The secret cannot be disclosed before the timelock by other than the Vendor");
+            emit LogVulnerabilityPatched(_vulnerabilityId, false, true);
+        }
+
+
+        // Set secret and state, and disclose secret
         vendorContract.setSecret(_vulnerabilityId, _secret);
         vendorContract.setState(_vulnerabilityId, VendorContract.State.Disclosable);
 
         bytes memory secret_bytes = abi.encode(_secret);
         emit InterledgerEventSending(_vulnerabilityId, secret_bytes);
 
-        //Retrive rewardState
+
+        // Process reward
         (VendorContract.RewardState _rewardState, uint _amount) = vendorContract.getVulnerabilityReward(_vulnerabilityId);
 
-            // Send the reward only if present
+            // Send the reward only if present (the Vendor has acknowledged and funded the reward)
         if(_rewardState == VendorContract.RewardState.SET && _amount > 0)
             vendorContract.payBounty(_vulnerabilityId);
     }
-
-    // function TriggerLocationPublishment(uint _vulnerabilityId){
-    //     address _vendor = VendorVulnerabilities[_vulnerabilityId];
-    //     VendorContract vendorContract = vendorRecords[_vendor]._contract;
-    //     (,,,,,_secret,_location) = vendorContract.getVulnerabilityInfo(id);
-    //     if(_secret != 0  && _location=="")
-    //     {    bytes memory secret_bytes = abi.encode(_secret);
-    //         emit InterledgerEventSending(_vulnerabilityId, secret_bytes);}
-    // }
 
     /**
         @dev Inherited from InterledgerReceiverInterface 
@@ -456,8 +431,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
         (,VendorContract.State _state,,uint _timelock,uint _acktimelock,,)=vendorContract.getVulnerabilityInfo(_vulnerabilityId);
-        return  ((_state == VendorContract.State.Valid && _acktimelock < block.timestamp ) || (_state == VendorContract.State.Acknowledged && _timelock < block.timestamp) ||
-                (_state == VendorContract.State.Patched));
+        return  ((_state == VendorContract.State.Valid && _acktimelock < block.timestamp ) || (_state == VendorContract.State.Acknowledged && _timelock < block.timestamp));
     }
 
 }
