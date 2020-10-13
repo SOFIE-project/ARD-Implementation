@@ -21,7 +21,7 @@ The Authority deploys the smart contract. An Expert uploads a bundle consisting 
 - OR
 - (V.State == Acknowledged AND V.Timelock.Expired)
 - OR
-- (V.State == Patched)
+- (Vendor notifies a patch)
 
 The disclosure consists of two phases: publishing the secret (Disclosable), and fully disclose the vulnerability data (Disclosed). The current smart contract also stores a reward for the Expert that can be collected by them at any moment after the secret  has been published (V.State == Disclosed). The reward amount is set by the Vendor at acknowledgeVulnerability.
 
@@ -61,7 +61,7 @@ The ARD flow is the following:
 
 - [X] Write the tests for the smart contract
 - [X] Update contract's documentation
-- [ ] Clean code
+- [x] Clean code
 
 
 ## Requirements
