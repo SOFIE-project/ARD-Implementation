@@ -318,11 +318,11 @@ contract("AuthorityContract", function(accounts) {
             assert.equal(info[1], STATUS.Disclosable, "The status should be " + STATUS.Disclosable + " (Disclosable)");
             assert.isAtLeast(parseInt(expertBalance_after), parseInt(expertBalance_before), "The expert should gain the reward and thus have higher balance than before");
 
-            const secret_bytes = web3.eth.abi.encodeParameter('uint256', ''+secret);
+            const data = web3.eth.abi.encodeParameters(['bool', 'uint256'], [true, secret]);
             truffleAssert.eventEmitted(tx, 'InterledgerEventSending', (ev) => {                
                 return (
                         ev.id == vulnerabilityId,
-                        ev.data == secret_bytes
+                        ev.data == data
                         );
             }, 'InterledgerEventSending event did not fire with correct parameters');
 
@@ -359,7 +359,7 @@ contract("AuthorityContract", function(accounts) {
             assert.equal(info[1], STATUS.Disclosable, "The status should be " + STATUS.Disclosable + " (Disclosable)");
             assert.isAtLeast(parseInt(expertBalance_after), parseInt(expertBalance_before), "The expert should gain the reward and thus have higher balance than before");
 
-            const secret_bytes = web3.eth.abi.encodeParameter('uint256', ''+secret);
+            const data = web3.eth.abi.encodeParameters(['bool', 'uint256'], [true, secret]);
 
             truffleAssert.eventEmitted(tx, 'LogVulnerabilityPatched', (ev) => {                
                 return (

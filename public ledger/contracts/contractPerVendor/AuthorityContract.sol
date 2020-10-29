@@ -315,15 +315,17 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         // Retrive VendorContract and info
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
+        bool patched = false;
 
         if(msg.sender == vendorContract.owner()) {
 
+            patched = true;
             require(vendorContract.canBePatched(_vulnerabilityId), "The vulnerability can be patched only if previously Acknowledged");
-            emit LogVulnerabilityPatched(_vulnerabilityId, true, vendorContract.isTimelockExpired(_vulnerabilityId));
+            emit LogVulnerabilityPatched(_vulnerabilityId, patched, vendorContract.isTimelockExpired(_vulnerabilityId));
         }
         else {
             require(isDisclosable(_vulnerabilityId), "The secret cannot be disclosed before the timelock by other than the Vendor");
-            emit LogVulnerabilityPatched(_vulnerabilityId, false, true);
+            emit LogVulnerabilityPatched(_vulnerabilityId, patched, true);
         }
 
 
@@ -331,8 +333,8 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         vendorContract.setSecret(_vulnerabilityId, _secret);
         vendorContract.setState(_vulnerabilityId, VendorContract.State.Disclosable);
 
-        bytes memory secret_bytes = abi.encode(_secret);
-        emit InterledgerEventSending(_vulnerabilityId, secret_bytes);
+        bytes memory data = abi.encode(patched, _secret);
+        emit InterledgerEventSending(_vulnerabilityId, data);
 
 
         // Process reward
