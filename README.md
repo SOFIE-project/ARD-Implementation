@@ -40,10 +40,8 @@ Finally, the `emitData` function is called to transfer the vulnerability informa
 The sequence diagram for the Private Ledger is depicted as follows:
 
 <p align="center">
-  <img width="500" src="http://www.fillmurray.com/460/300">
+  <img src="images/vul-chaincode-seq-digram.png">
 </p>
-
-
 
 
 ## Requirements
