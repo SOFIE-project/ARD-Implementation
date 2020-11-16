@@ -13,7 +13,7 @@ The Architecure is illustrated as follows:
 
 
 <p align="center">
-  <img height = "300" width="200" src="images/high-level-arch-private.png">
+  <img height = "700" width="800" src="images/high-level-arch-private.png">
 </p>
 
 
