@@ -12,7 +12,10 @@ The hash essentially serves as evidence for the existence of a vulnerability in 
 The Architecure is illustrated as follows:
 
 
-![High-level Architecture of ARD Private Ledger](images/high-level-arch-private.png)
+<p align="center">
+  <img height = "300" width="200" src="images/high-level-arch-private.png">
+</p>
+
 
 
 For the ARD Project sample case, the `CollectionOne` Private Data Collection stores the following Vulnerability details:
