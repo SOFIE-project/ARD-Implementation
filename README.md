@@ -11,9 +11,11 @@ The hash essentially serves as evidence for the existence of a vulnerability in 
 
 The Architecure is illustrated as follows:
 
+
 ![High-level Architecture of ARD Private Ledger](images/high-level-arch-private.png)
 
-For the ARD Project sample case, the 'CollectionOne' Private Data Collection is defined to store the following Vulnerability details:
+
+For the ARD Project sample case, the `CollectionOne` Private Data Collection is defined to store the following Vulnerability details:
 
 * `vendorName` - Registered Vendor's Name
 * `vendorID` - Unique Identifier of Vendor
@@ -36,6 +38,7 @@ Finally, the `emitData` function is called to transfer the vulnerability informa
 
 
 The sequence diagram for the Private Ledger is depicted as follows:
+
 
 ![Vulnerability Chaincode Sequence Diagram](images/vul-chaincode-seq-digram.png)
 
