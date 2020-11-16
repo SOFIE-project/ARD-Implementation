@@ -50,8 +50,9 @@ You would need the following already installed in your system
 * VSCode (Version 1.38 or greater)
 
 	Install the [.deb package](https://code.visualstudio.com/download) and run the following command
-	
-	```sudo apt install ./<file>.deb```
+	```
+	sudo apt install ./<file>.deb
+	```
 
 * Docker (Version 17.06.2-ce or greater)
 
