@@ -99,7 +99,7 @@ npm run build
 To run unit tests, type the following command
 
 ```
-npm run
+npm run test
 ```
 
 If you encounter errors during network start or chaincode instantiation, run the following commands
