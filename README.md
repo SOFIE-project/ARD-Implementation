@@ -15,7 +15,7 @@ The Architecure is illustrated as follows:
 ![High-level Architecture of ARD Private Ledger](images/high-level-arch-private.png)
 
 
-For the ARD Project sample case, the `CollectionOne` Private Data Collection is defined to store the following Vulnerability details:
+For the ARD Project sample case, the `CollectionOne` Private Data Collection stores the following Vulnerability details:
 
 * `vendorName` - Registered Vendor's Name
 * `vendorID` - Unique Identifier of Vendor
@@ -87,6 +87,7 @@ npm install -g typescript
 
 If you're using VSCode, follow the instructions at [Guided Tutorials in VSCode](https://cloud.ibm.com/docs/blockchain-sw-213?topic=blockchain-sw-213-develop-vscode#develop-vscode-guided-tutorials) to create an environment, and package/install/instantiate the smart contract.
 
+
 ## Execution
 
 To execute the ARD sample case, run
@@ -100,6 +101,18 @@ To run unit tests, type the following command
 ```
 npm run
 ```
+
+If you encounter errors during network start or chaincode instantiation, run the following commands
+
+```
+ docker container stop $(docker container ls -aq) \\stop Docker containers
+ docker container rm $(docker container ls -aq) \\remove Docker containers
+ docker network prune \\remove all custom networks not used by at least one container
+ docker image prune \\remove all dangling images
+ docker volume prune \\remove all local volumes not used by at least one container
+```
+Start a fresh environment and follow the aforementioned steps.
+
 
 ## To Do
 
