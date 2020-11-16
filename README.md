@@ -76,7 +76,8 @@ You would need the following already installed in your system
 While all the scripts for the ARD sample case are written in TypeScript, you could easily remove the types to serve non-typescript applications as well. 
 
 To explicitly install TypeScript globally in your system, run
-```npm install -g typescript
+```
+npm install -g typescript
 ```
  
 
@@ -87,12 +88,14 @@ If you're using VSCode, follow the instructions at [Guided Tutorials in VSCode](
 
 To execute the ARD sample case, run
 
-```npm run build
+```
+npm run build
 ```
 
 To run unit tests, type the following command
 
-```npm run
+```
+npm run
 ```
 
 ## To Do
