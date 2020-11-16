@@ -1,17 +1,17 @@
 # Automated Responsible Disclosure Implementation
 ## Private Data Collections - Chaincode Development 
 
-The Private Ledger for the Automated Responsible Disclosure Mechanism is implemented using HyperLedger Fabric, exploiting the concept of Private Data Collections. 
+The Private Ledger for the Automated Responsible Disclosure Project is implemented using HyperLedger Fabric, exploiting the concept of Private Data Collections. 
 
 For every Vendor registered with the ARD system, a separate Private Data Collection is created, i.e, there is **one Collection per Vendor**, and a **single Channel for all Vendors**. 
 
-The Private data is shared only between the concerned *Vendor* and the *Authority*, and no other member on the Channel has access to this sensitive information, thereby ensuring secured storage of sensitive information. Other vendors on the channel can only see a hash-encrypted copy of the transactions, which could be used for validation and audit purposes, but has no knowledge of the Private States. 
+The Private data is shared only between the concerned *Vendor* and the *Authority*, and no other member on the Channel has access to the vulnerability details, thereby ensuring secured storage of sensitive information. Other vendors on the channel can only see a hash-encrypted copy of the transactions, which could be used for validation and audit purposes, but bear no knowledge of the Private States. 
 
 The hash essentially serves as evidence for the existence of a vulnerability in a particular Vendor’s product but does not allow any unauthorized member to access the Private states. Further, the private details in PDCs are also not revealed to the Ordering Service, thereby adding another layer of security, besides being GDPR compliant.
 
 The Architecure is illustrated as follows:
 
-![High-level Architecture of ARD Private Ledger](https://github.com/Prateeti98/ARD-Implementation/blob/chaincode-refactor/images/high-level-arch-private.png)
+![High-level Architecture of ARD Private Ledger](images/high-level-arch-private.png)
 
 For the ARD Project sample case, the 'CollectionOne' Private Data Collection is defined to store the following Vulnerability details:
 
@@ -24,19 +24,20 @@ For the ARD Project sample case, the 'CollectionOne' Private Data Collection is 
 * `gracePeriod` - Time granted to fix vulnerability
 * `bountyAmount` - Bug Bounty reward
 
-The `vulnerabilityID` is used as a key to create/read/update/delete/verify vulnerability private details. The attributes and their types are listed in the [vulnerability.ts](src/vulnerability.ts) file.
+The `vulnerabilityID` is used as the key to Create, Read, Update, Delete and Verify vulnerability private details. The attributes and their types are listed in the [vulnerability.ts](src/vulnerability.ts) file.
 
 
 Besides the standard CRUD and verify operations on Collections, the [vulnerability-contract](src/vulnerability-contract.ts) implements `InterledgerReceiver` and `InterledgerSender` interfaces for Fabric to make the system IL compliant. 
 
 
-`InterledgerReceiver` receives the Secret from the Interledger Component and decodes the data to obtain the `patchState` and `vulnerabilityId`. Then, if a patch has been released, `InterledgerReceiver` calls the `updateVulnerability` method to update the information stored in the Private States for the corresponding `vulnerabilityID`. Finally, the Public States are updated and the `InterledgerEventAccepted` event is emitted. Then, the `emitData` function is called to transfer the vulnerability information to the IL Component via the `InterledgerEventSending` event and the Public States are updated. 
+`InterledgerReceiver` receives the Secret from the Interledger Component and decodes the data to obtain the `patchState` and `vulnerabilityId`. If the attribute indicates that a patch has been released, `InterledgerReceiver` calls the `updateVulnerability` method to update the information stored in the Private States for the corresponding `vulnerabilityID`. Finally, the Public States are updated and the `InterledgerEventAccepted` event is emitted. 
+
+Finally, the `emitData` function is called to transfer the vulnerability information to the IL Component via the `InterledgerEventSending` event and the Public States are updated. 
 
 
 The sequence diagram for the Private Ledger is depicted as follows:
 
-
-![Vulnerability Chaincode Sequence Diagram](https://github.com/Prateeti98/ARD-Implementation/blob/chaincode-refactor/images/vul-chaincode-seq-digram.png)
+![Vulnerability Chaincode Sequence Diagram](images/vul-chaincode-seq-digram.png)
 
 
 ## Requirements
@@ -79,8 +80,6 @@ To explicitly install TypeScript globally in your system, run
 ```
 npm install -g typescript
 ```
- 
-
 
 If you're using VSCode, follow the instructions at [Guided Tutorials in VSCode](https://cloud.ibm.com/docs/blockchain-sw-213?topic=blockchain-sw-213-develop-vscode#develop-vscode-guided-tutorials) to create an environment, and package/install/instantiate the smart contract.
 
