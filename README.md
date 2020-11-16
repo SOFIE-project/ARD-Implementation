@@ -3,7 +3,9 @@
 
 The Private Ledger for the Automated Responsible Disclosure Mechanism is implemented using HyperLedger Fabric, exploiting the concept of Private Data Collections. 
 
-For every Vendor registered with the ARD system, a separate Private Data Collection is created, i.e, there is one Collection per Vendor, and a single Channel for all Vendors. The Private data is shared only between the concerned *Vendor* and the *Authority*, and no other member on the Channel has access to this sensitive information, thereby ensuring secured storage of sensitive information. Other vendors on the channel can only see a hash-encrypted copy of the transactions, which could be used for validation and audit purposes, but has no knowledge of the Private States. 
+For every Vendor registered with the ARD system, a separate Private Data Collection is created, i.e, there is **one Collection per Vendor**, and a **single Channel for all Vendors**. 
+
+The Private data is shared only between the concerned *Vendor* and the *Authority*, and no other member on the Channel has access to this sensitive information, thereby ensuring secured storage of sensitive information. Other vendors on the channel can only see a hash-encrypted copy of the transactions, which could be used for validation and audit purposes, but has no knowledge of the Private States. 
 
 The hash essentially serves as evidence for the existence of a vulnerability in a particular Vendor’s product but does not allow any unauthorized member to access the Private states. Further, the private details in PDCs are also not revealed to the Ordering Service, thereby adding another layer of security, besides being GDPR compliant.
 
@@ -48,6 +50,7 @@ You would need the following already installed in your system
 * VSCode (Version 1.38 or greater)
 
 	Install the [.deb package](https://code.visualstudio.com/download) and run the following command
+	
 	`sudo apt install ./<file>.deb`
 
 * Docker (Version 17.06.2-ce or greater)
@@ -57,6 +60,7 @@ You would need the following already installed in your system
 * Docker Compose (v1.14.0 or greater)
 
 	`sudo curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose`
+	
 	`sudo chmod +x /usr/local/bin/docker-compose`
 
 * Node and npm ( Node ^10.15.3 or ^12.15.0 and npm v6.x or greater)
