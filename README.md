@@ -18,7 +18,7 @@ For the ARD Project sample case, the 'CollectionOne' Private Data Collection is 
 * `gracePeriod` - Time granted to fix vulnerability
 * `bountyAmount` - Bug Bounty reward
 
-The 'vulnerabilityID' is used as a key to create/read/update/delete/verify vulnerability private details. The attributes and their types can be found in the [vulnerability.ts](https://github.com/Prateeti98/ARD-Implementation/blob/chaincode-refactor/src/vulnerability.ts).
+The `vulnerabilityID` is used as a key to create/read/update/delete/verify vulnerability private details. The attributes and their types are listed in the [vulnerability.ts](https://github.com/Prateeti98/ARD-Implementation/blob/chaincode-refactor/src/vulnerability.ts) file.
 
 Besides the standard CRUD and verify operations on Collections, the [vulnerability-contract](https://github.com/Prateeti98/ARD-Implementation/blob/chaincode-refactor/src/vulnerability-contract.ts) implements `InterledgerReceiver` and `InterledgerSender` interfaces for Fabric to make the system IL compliant. 
 
