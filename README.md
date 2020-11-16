@@ -101,7 +101,7 @@ npm run
 
 - [ ] Decide on Transient Map for `updateVulnerability`
 - [ ] Clean tests
-- [ ] Update Diagrams
+- [x] Update Diagrams
 
 
 
