@@ -1,5 +1,5 @@
 # Automated Responsible Disclosure Implementation
-##Private Data Collections - Chaincode Development 
+## Private Data Collections - Chaincode Development 
 
 The Private Ledger for the Automated Responsible Disclosure Mechanism is implemented using HyperLedger Fabric, exploiting the concept of Private Data Collections. For every Vendor registered with the ARD system, a separate Private Data Collection is created, i.e, there is one Collection per Vendor, and a single Channel for all Vendors. The Private data is shared only between the concerned *Vendor* and the *Authority*, and no other member on the Channel has access to this sensitive information, thereby ensuring secured storage of sensitive information. Other vendors on the channel can only see a hash-encrypted copy of the transactions, which could be used for validation and audit purposes, but has no knowledge of the Private States. The hash essentially serves as evidence for the existence of a vulnerability in a particular Vendor’s product but does not allow any unauthorized member to access the Private states. Further, the private details in PDCs are also not revealed to the Ordering Service, thereby adding another layer of security, besides being GDPR compliant.
 
@@ -28,7 +28,7 @@ The sequence diagram for the Private Ledger is depicted as follows:
 
 ![Vulnerability Chaincode Sequence Diagram](https://github.com/Prateeti98/ARD-Implementation/blob/chaincode-refactor/images/vul-chaincode-seq-digram.png)
 
-######Requirements
+###### Requirements
 
 Follow the steps to install [Fabric Prerequisites](https://hyperledger-fabric.readthedocs.io/en/release-1.4/getting_started.html) for Fabric v1.4 (if you haven't already).
 
@@ -64,7 +64,7 @@ To explicitly install TypeScript globally in your system, run
 
 If you're using VSCode, follow the instructions at [Guided Tutorials in VSCode](https://cloud.ibm.com/docs/blockchain-sw-213?topic=blockchain-sw-213-develop-vscode#develop-vscode-guided-tutorials) to create an environment, and package/install/instantiate the smart contract.
 
-######Execution
+###### Execution
 
 To execute the ARD sample case, run
 
@@ -74,7 +74,7 @@ To run unit tests, type the following command
 
 `npm run`
 
-######To Do
+###### To Do
 
 - [ ] Decide on Transient Map for `updateVulnerability`
 - [ ] Clean tests
