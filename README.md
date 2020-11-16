@@ -105,11 +105,11 @@ npm run
 If you encounter errors during network start or chaincode instantiation, run the following commands
 
 ```
- docker container stop $(docker container ls -aq) ::stop Docker containers
- docker container rm $(docker container ls -aq) \\remove Docker containers
- docker network prune \\remove all custom networks not used by at least one container
- docker image prune \\remove all dangling images
- docker volume prune \\remove all local volumes not used by at least one container
+ docker container stop $(docker container ls -aq) 
+ docker container rm $(docker container ls -aq) 
+ docker network prune 
+ docker image prune 
+ docker volume prune 
 ```
 Start a fresh environment and follow the aforementioned steps.
 
