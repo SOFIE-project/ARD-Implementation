@@ -24,10 +24,10 @@ For the ARD Project sample case, the 'CollectionOne' Private Data Collection is 
 * `gracePeriod` - Time granted to fix vulnerability
 * `bountyAmount` - Bug Bounty reward
 
-The `vulnerabilityID` is used as a key to create/read/update/delete/verify vulnerability private details. The attributes and their types are listed in the [vulnerability.ts](https://github.com/Prateeti98/ARD-Implementation/blob/chaincode-refactor/src/vulnerability.ts) file.
+The `vulnerabilityID` is used as a key to create/read/update/delete/verify vulnerability private details. The attributes and their types are listed in the [vulnerability.ts](src/vulnerability.ts) file.
 
 
-Besides the standard CRUD and verify operations on Collections, the [vulnerability-contract](https://github.com/Prateeti98/ARD-Implementation/blob/chaincode-refactor/src/vulnerability-contract.ts) implements `InterledgerReceiver` and `InterledgerSender` interfaces for Fabric to make the system IL compliant. 
+Besides the standard CRUD and verify operations on Collections, the [vulnerability-contract](src/vulnerability-contract.ts) implements `InterledgerReceiver` and `InterledgerSender` interfaces for Fabric to make the system IL compliant. 
 
 
 `InterledgerReceiver` receives the Secret from the Interledger Component and decodes the data to obtain the `patchState` and `vulnerabilityId`. Then, if a patch has been released, `InterledgerReceiver` calls the `updateVulnerability` method to update the information stored in the Private States for the corresponding `vulnerabilityID`. Finally, the Public States are updated and the `InterledgerEventAccepted` event is emitted. Then, the `emitData` function is called to transfer the vulnerability information to the IL Component via the `InterledgerEventSending` event and the Public States are updated. 
