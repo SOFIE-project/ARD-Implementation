@@ -3,7 +3,7 @@
 
 The Private Ledger for the Automated Responsible Disclosure Project is implemented using HyperLedger Fabric, exploiting the concept of Private Data Collections. 
 
-For every Vendor registered with the ARD system, a separate Private Data Collection is created, i.e, there is **one Collection per Vendor**, and a **single Channel for all Vendors**. 
+For every Vendor registered with the ARD system, a separate Private Data Collection is created, i.e, there is **one Collection per Vendor**, and a **common Channel for all Vendors**. This design drastically reduces the administrative overhead of creating new Channels for every Vendor registered with the ARD system, without compromising the Vendor's reputation. 
 
 The Private data is shared only between the concerned *Vendor* and the *Authority*, and no other member on the Channel has access to the vulnerability details, thereby ensuring secured storage of sensitive information. Other vendors on the channel can only see a hash-encrypted copy of the transactions, which could be used for validation and audit purposes, but bear no knowledge of the Private States. 
 
@@ -35,9 +35,9 @@ The `vulnerabilityID` is used as the key to Create, Read, Update, Delete and Ver
 Besides the standard CRUD and verify operations on Collections, the [vulnerability-contract](src/vulnerability-contract.ts) implements `InterledgerReceiver` and `InterledgerSender` interfaces for Fabric to make the system IL compliant. 
 
 
-`InterledgerReceiver` receives the Secret from the Interledger Component and decodes the data to obtain the `patchState` and `vulnerabilityId`. If the attribute indicates that a patch has been released, `InterledgerReceiver` calls the `updateVulnerability` method to update the information stored in the Private States for the corresponding `vulnerabilityID`. Finally, the Public States are updated and the `InterledgerEventAccepted` event is emitted. 
+`InterledgerReceiver` receives the Secret from the Interledger Component and decodes the data to obtain the `patchState` and `vulnerabilityId`. If the attribute indicates that a patch has been released, `InterledgerReceiver` calls the `updateVulnerability` method to update the information stored in the Private States for the corresponding `vulnerabilityID`. The Public States are then updated and the `InterledgerEventAccepted` event is emitted. 
 
-Finally, the `emitData` function is called to transfer the vulnerability information to the IL Component via the `InterledgerEventSending` event and the Public States are updated. 
+Finally, the `emitData` function is called to transfer the vulnerability information to the IL Component via the `InterledgerEventSending` event and the Public States are updated to reflect the transactions. 
 
 
 The sequence diagram for the Private Ledger is depicted as follows:
@@ -78,7 +78,7 @@ You would need the following already installed in your system
 	pkg install node
 	```
 
-* (Optional) If you wish to develop Go contracts, follows steps at [Go installation](https://golang.org/dl/) (version v1.12 or greater)
+* (Optional) If you wish to develop Go contracts, follows steps for [Go installation](https://golang.org/dl/) (version v1.12 or greater)
 
 
 While all the scripts for the ARD sample case are written in TypeScript, you could easily remove the types to serve non-typescript applications as well. 
@@ -88,7 +88,7 @@ To explicitly install TypeScript globally in your system, run
 npm install -g typescript
 ```
 
-If you're using VSCode, follow the instructions at [Guided Tutorials in VSCode](https://cloud.ibm.com/docs/blockchain-sw-213?topic=blockchain-sw-213-develop-vscode#develop-vscode-guided-tutorials) to create an environment, and package/install/instantiate the smart contract.
+If you're using VSCode, follow the instructions listed in the [Guided Tutorials in VSCode](https://cloud.ibm.com/docs/blockchain-sw-213?topic=blockchain-sw-213-develop-vscode#develop-vscode-guided-tutorials) to create an environment, and package/install/instantiate the smart contract.
 
 
 ## Execution
