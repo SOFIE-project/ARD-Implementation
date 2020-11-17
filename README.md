@@ -7,7 +7,7 @@ For every Vendor registered with the ARD system, a separate Private Data Collect
 
 The Private data is shared only between the concerned *Vendor* and the *Authority*, and no other member on the Channel has access to the vulnerability details, thereby ensuring secured storage of sensitive information. Other vendors on the channel can only see a hash-encrypted copy of the transactions, which could be used for validation and audit purposes, but bear no knowledge of the Private States. 
 
-The hash essentially serves as evidence for the existence of a vulnerability in a particular Vendor’s product but does not allow any unauthorized member to access the Private states. Further, the private details in PDCs are also not revealed to the Ordering Service, thereby adding another layer of security, besides being GDPR compliant.
+The hash essentially serves as evidence for the existence of a vulnerability in a particular Vendor’s product, but does not allow any unauthorized member to access the Private states. Further, the private details in PDCs are also not revealed to the Ordering Service, thereby adding another layer of security, besides being GDPR compliant.
 
 The Architecure is illustrated as follows:
 
