@@ -67,6 +67,7 @@ contract("VendorContract", function(accounts) {
         it("Should store a new product record", async function() {
 
             const tx = await vendor.registerProduct(productName, {from: vendorAddress});
+            console.log("register product " + tx.receipt.gasUsed);
 
             const p_Id = tx["logs"][0].args.productId;
             const product = await vendor.getProductById(p_Id);
@@ -320,7 +321,8 @@ contract("VendorContract", function(accounts) {
             await vendor.setState(vulnerabilityId, STATUS.Valid, {from: authorityAddress});
             await vendor.setTimelock(vulnerabilityId, ackTimelock, timelock, {from: authorityAddress});
 
-            await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+            tx = await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+            console.log("Acknwoledge " + tx.receipt.gasUsed);
 
             const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
             const reward = await vendor.getVulnerabilityReward(vulnerabilityId);

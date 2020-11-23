@@ -333,7 +333,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         vendorContract.setSecret(_vulnerabilityId, _secret);
         vendorContract.setState(_vulnerabilityId, VendorContract.State.Disclosable);
 
-        bytes memory data = abi.encode(patched, _secret);
+        bytes memory data = abi.encode(_secret);
         emit InterledgerEventSending(_vulnerabilityId, data);
 
 

@@ -89,6 +89,7 @@ contract("AuthorityContract", function(accounts) {
         it("Should register a vendor", async function() {
 
             let tx = await authority.registerVendor(vendorAddress, {from: authorityAddress});
+            console.log("Register vendor " + tx.receipt.gasUsed);
 
             const vendorRecord = await authority.getVendorRecordByIdx(0); // first vendor registered
 
@@ -173,7 +174,8 @@ contract("AuthorityContract", function(accounts) {
         it("Should register a new vulnerability", async function() {
     
             let tx = await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
-
+            console.log("Register vulnerability " + tx.receipt.gasUsed);
+            
             let event = tx["logs"][0].args;
             let v = await authority.VendorVulnerabilities(event.vulnerabilityId);
             let info = await vendor.getVulnerabilityInfo(event.vulnerabilityId);
@@ -228,6 +230,7 @@ contract("AuthorityContract", function(accounts) {
 
             const motivation = "Vulnerability approved";
             let tx = await authority.approve(vulnerabilityId, ackTimelock, timelock, DECISION.Approved, motivation, {from: authorityAddress});
+            console.log("approve " + tx.receipt.gasUsed);
 
             truffleAssert.eventEmitted(tx, 'LogVulnerabilityApproval', (ev) => {                
                 return (
@@ -311,6 +314,7 @@ contract("AuthorityContract", function(accounts) {
             const expertBalance_before = web3.utils.fromWei(await web3.eth.getBalance(expertAddress), 'ether');
 
             let tx = await authority.publishSecret(vulnerabilityId, secret, {from: vendorAddress});
+            console.log("Publish secret from vendor " + tx.receipt.gasUsed);
 
             const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
             const expertBalance_after = web3.utils.fromWei(await web3.eth.getBalance(expertAddress), 'ether');
@@ -318,7 +322,7 @@ contract("AuthorityContract", function(accounts) {
             assert.equal(info[1], STATUS.Disclosable, "The status should be " + STATUS.Disclosable + " (Disclosable)");
             assert.isAtLeast(parseInt(expertBalance_after), parseInt(expertBalance_before), "The expert should gain the reward and thus have higher balance than before");
 
-            const data = web3.eth.abi.encodeParameters(['bool', 'uint256'], [true, secret]);
+            const data = web3.eth.abi.encodeParameters(['uint256'], [secret]);
             truffleAssert.eventEmitted(tx, 'InterledgerEventSending', (ev) => {                
                 return (
                         ev.id == vulnerabilityId,
@@ -378,6 +382,7 @@ contract("AuthorityContract", function(accounts) {
             await sleep(6000)
     
             let tx = await authority.publishSecret(vulnerabilityId, secret, {from: expertAddress});
+            console.log("Publish secret from expert " + tx.receipt.gasUsed);
 
             const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
             const expertBalance_after = web3.utils.fromWei(await web3.eth.getBalance(expertAddress), 'ether');
@@ -404,6 +409,7 @@ contract("AuthorityContract", function(accounts) {
             await sleep(10000)
     
             let tx = await authority.publishSecret(vulnerabilityId, secret, {from: expertAddress});
+            console.log("Publish secret from expert, BUT FUNDS " + tx.receipt.gasUsed);
 
             const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
             const expertBalance_after = web3.utils.fromWei(await web3.eth.getBalance(expertAddress), 'ether');
