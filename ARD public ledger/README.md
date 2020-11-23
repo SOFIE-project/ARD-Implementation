@@ -1,3 +1,9 @@
+---
+noteId: "ee3edfc02d9f11ebb4d73bcb01a039d6"
+tags: []
+
+---
+
 # Automated Responsible Disclosure implementation
 
 ## * Smart contract development branch *
