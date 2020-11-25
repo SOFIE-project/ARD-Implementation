@@ -1,0 +1,6 @@
+2020.11.22-12:21:24.867[90m debug[39m [caliper] [blockchain] 	Constructed a winston logger with the specified settings
+2020.11.22-12:21:25.007[33m warn [39m [caliper] [bind] 	Working directory not specified. Using "/home/prateeti/SOFIE-private-ledger/vulnerability-private-data-collections"
+2020.11.22-12:21:25.008[32m info [39m [caliper] [bind] 	User-provided arguments for npm: "-g"
+2020.11.22-12:21:25.009[32m info [39m [caliper] [bind] 	Binding for fabric@1.4.8. This might take some time...
+2020.11.22-12:21:25.009[32m info [39m [caliper] [bind] 	Using working directory: /home/prateeti/SOFIE-private-ledger/vulnerability-private-data-collections
+2020.11.22-12:21:25.009[32m info [39m [caliper] [bind] 	Calling npm with: install -g fabric-client@1.4.8 fabric-protos@2.0.0-snapshot.1 fabric-network@1.4.8
