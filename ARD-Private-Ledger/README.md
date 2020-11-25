@@ -121,7 +121,7 @@ Start a fresh environment and follow the aforementioned steps.
 
 - [x] Decide on Transient Map for `updateVulnerability`
 - [x] Clean tests
-- [ ] Update Sequence Diagram
+- [x] Update Sequence Diagram
 - [ ] Add Benchmark section
 
 
