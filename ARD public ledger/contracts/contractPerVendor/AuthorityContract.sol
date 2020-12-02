@@ -223,7 +223,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         require(vendorIsRegistered(_vendor),"This vendor is unregistered");
 
         // Create a new entry
-        _vulnerabilityId = ID++;
+        _vulnerabilityId = ++ID;
 
         // Retrive VendorContract
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
@@ -333,7 +333,8 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         vendorContract.setSecret(_vulnerabilityId, _secret);
         vendorContract.setState(_vulnerabilityId, VendorContract.State.Disclosable);
 
-        bytes memory data = abi.encode(_secret);
+        // Encoding
+        bytes memory data = abi.encode(_vulnerabilityId, _secret);
         emit InterledgerEventSending(_vulnerabilityId, data);
 
 
@@ -353,6 +354,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
     function interledgerReceive(uint256 nonce, bytes memory data)   
         override public onlyInterledger {
 
+        // Decoding
         // Get the Id from the data field
         uint id;
         string memory location;

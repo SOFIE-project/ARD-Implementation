@@ -322,7 +322,7 @@ contract("AuthorityContract", function(accounts) {
             assert.equal(info[1], STATUS.Disclosable, "The status should be " + STATUS.Disclosable + " (Disclosable)");
             assert.isAtLeast(parseInt(expertBalance_after), parseInt(expertBalance_before), "The expert should gain the reward and thus have higher balance than before");
 
-            const data = web3.eth.abi.encodeParameters(['uint256'], [secret]);
+            const data = web3.eth.abi.encodeParameters(['uint256', 'uint256'], [vulnerabilityId.toNumber(), secret]);
             truffleAssert.eventEmitted(tx, 'InterledgerEventSending', (ev) => {                
                 return (
                         ev.id == vulnerabilityId,
