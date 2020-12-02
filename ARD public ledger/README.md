@@ -1,5 +1,17 @@
 # Public smart contracts of ARD
 
+## Table of Contents
+- [Overview](#Overview)
+- [The states of a vulnerability](#The-states-of-a-vulnerability)
+- [Structure of the folders](#Structure-of-the-folders)
+- [The flow of the smart contract functions](#The-flow-of-the-smart-contract-functions)
+- [Integration with SOFIE Interledger](#Integration-with-SOFIE-Interledger)
+    - [Encoding and decoding the data](#Encoding-and-decoding-the-data)
+- [Testing](#Testing)
+- [Setup for ARD demo](#Setup-for-ARD-demo)
+- [Requirements](#Requirements)
+
+
 ## Overview 
 The smart contracts store records of IT vulnerabilities. A state machine identifies the state of progress of a particular vulnerability, from its creation to its resolution. This provides a transparent, immutable and decentralized support to the responsible disclosure process.
 
@@ -77,14 +89,22 @@ The fuction *InterledgerReceive* decodes the received *data* in this way:
 
     TODO PUT HERE CODE
 
+## Testing
+
+The tests of the smart contracts are in the `test/` folder.
+
+## Setup for ARD demo
+
+Follow the steps [described here](./migrations/README.md).
+
 ## TODO
 
 - [X] Write the tests for the smart contract
 - [X] Update contract's documentation
 - [x] Clean code
 - [ ] Complete encoding/decoding examples
-- [ ] Provide setup code examples
-- [ ] Describe setup code examples
+- [X] Provide setup code examples
+- [X] Describe setup code examples
 - [ ] Describe the requirements
 
 
