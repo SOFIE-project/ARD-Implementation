@@ -333,6 +333,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         vendorContract.setSecret(_vulnerabilityId, _secret);
         vendorContract.setState(_vulnerabilityId, VendorContract.State.Disclosable);
 
+        // Encoding
         bytes memory data = abi.encode(_vulnerabilityId, _secret);
         emit InterledgerEventSending(_vulnerabilityId, data);
 
@@ -353,6 +354,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
     function interledgerReceive(uint256 nonce, bytes memory data)   
         override public onlyInterledger {
 
+        // Decoding
         // Get the Id from the data field
         uint id;
         string memory location;
