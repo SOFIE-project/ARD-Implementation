@@ -25,8 +25,6 @@ Run the script with the following Truffle command:
 
 (--reset is required to force Truffle to run the script a second time and so on). In this case, the timelock to patch a vulnerability is set to 100000 seconds. Therefore the Vendor has the time required to provide a patch, and test the condition that is the Vendor calling the smart contract with the secret, and thus triggering Interledger.
 
-**Note: if --network net_name is omitted, truffle executes a default network called "development". In that case, the timelock is set to 100000 seconds.**
-
 ### 2nd condition: Grace period exipres
 
 Run the script with the following Truffle command:

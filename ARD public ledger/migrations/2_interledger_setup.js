@@ -83,9 +83,11 @@ async function register_vulnerability(expert, authorityC, vendor, hashlock, prod
  * @param {*} accounts The list of accounts from the connected network
  */
 module.exports = async function(deployer, network, accounts) {
-    
-    deployer.deploy(Migrations);
 
+    // Execute this script only with one of these two networks
+    if(network != "to_patch" || network != "to_grace_period")
+        return;
+    
     // Store sample accounts for migration
         // These accounts belong to the actors like Authority, Vendor and Expert to interact with the system
         // Also know as Externally Owned Account (EOA)
@@ -139,12 +141,6 @@ module.exports = async function(deployer, network, accounts) {
         // Give little grace period to be able to trigger the "expired grace period condition"
         timelock = Math.round(new Date() / 1000) + 10;
     }
-
-    else {
-        // (no --network provided, default is development. Give enough timelock to patch)
-        timelock = Math.round(new Date() / 1000) + 100000;        
-    }
-
 
     // Authority: Approve vulnerability
         // Params: vulnerability id, timelock to acknwoledge, timelock to patch, authority decision, motivation sring

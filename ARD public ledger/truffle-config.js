@@ -48,6 +48,18 @@ module.exports = {
     //  network_id: "*",       // Any network (default: none)
     // },
 
+    to_patch: {
+     host: "127.0.0.1",     // Localhost (default: none)
+     port: 7545,            // Standard Ethereum port (default: none)
+     network_id: "*",       // Any network (default: none)
+    },
+
+    to_grace_period: {
+      host: "127.0.0.1",     // Localhost (default: none)
+      port: 7545,            // Standard Ethereum port (default: none)
+      network_id: "*",       // Any network (default: none)
+     },
+ 
     // Another network with more advanced options...
     // advanced: {
       // port: 8777,             // Custom port
