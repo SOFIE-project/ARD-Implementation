@@ -357,11 +357,11 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         // Decoding
         // Get the Id from the data field
         uint id;
-        string id_string
+        string memory id_string;
         string memory location;
         (id_string, location) = abi.decode(data, (string, string));
         
-        id=parseInt(id_string);
+        id=uint(parseInt(id_string));
 
         // Retrive VendorContract
         require(haveVulnerability(id), "vulnerabilityId does not exist");
@@ -441,13 +441,26 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         return  ((_state == VendorContract.State.Valid && _acktimelock < block.timestamp ) || (_state == VendorContract.State.Acknowledged && _timelock < block.timestamp));
     }
     
-    \\utility funtion for parsing
+/**utility funtion for parsing
+
+    /**
+        @notice Utility to parse int
+        @param _a String to be barsed, string
+        @return int
+     */
     
     function parseInt(string memory _a) public pure returns (int) {
        return parseInt(_a, 0);
     }
 
-    function parseInt(string memory a, uint b) public pure returns (int) {
+     /**
+        @notice Utility to parse int
+        @param _a String to be barsed, string
+         @param _b Reference, uint
+        @return int
+     */
+
+    function parseInt(string memory _a, uint _b) public pure returns (int) {
        bytes memory bresult = bytes(_a);
        int mint = 0;
        bool decimals = false;
