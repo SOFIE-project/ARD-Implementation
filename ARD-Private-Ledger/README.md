@@ -28,16 +28,20 @@ For the ARD Project sample case, the `CollectionOne` Private Data Collection sto
 * `vulnerabilitySeverity` - Severity (according to Taxonomy) selected during report submission
 * `vulnerabilityPath` - Location of Vulnerability
 * `vulnerabilityDesc` - Brief description of Vulnerability
+* `approvedOn` - Date when vulnerability report was approved
+* `gracePeriod` - The amount of time granted to the Vendor to fix the vulnerability 
 
-The `secret` is used as the key to Create, Read, Update, Delete (CRUD) and Verify vulnerability private details. The attributes and their types are listed in the [vulnerability.ts](src/vulnerability.ts) file.
+The `secret` is used as the key to Create, Read, Update, Delete (CRUD) and Verify vulnerability private details. The attributes and their types are listed in the [vulnerability-records.ts](src/vulnerability-records.ts) file.
 
 
-Besides the standard CRUD and verify operations on Collections, the [vulnerability-contract](src/vulnerability-contract.ts) implements `InterledgerReceiver` and `InterledgerSender` interfaces for Fabric to make the system IL compliant. 
+Besides the standard CRUD and verify operations on Collections, the [vulnerability-records-contract](src/vulnerability-records-contract.ts) implements `InterledgerReceiver` and `InterledgerSender` interfaces for Fabric to make the system IL compliant. 
 
 
-`InterledgerReceiver` receives the Secret from the Interledger Component and decodes the data to obtain the `vulnerabilityID` and `secret`. If the `secret` is valid, i.e., vulnerability records corresponding to the supplied `secret` exists, the public states are updated and the `InterledgerEventAccepted` event is emitted. Then, the `emitData` function is triggered to transfer the vulnerability information to the IL Component via the `InterledgerEventSending` event and the Public States are updated to reflect the transactions. 
+`InterledgerReceiver` receives data from the Interledger Component and decodes the data to obtain the `vulnerabilityID` and `secret`. If the `secret` is valid, i.e., vulnerability records corresponding to the supplied `secret` exists, the public states are updated with the supplied nonce and data, and the `InterledgerEventAccepted` event is emitted. Then, the corresponding vulnerability details for the `secret` are obtained and uploaded to an external Cloudant database. Finally, the `emitData` function is triggered to transfer the vulnerability location (URL where the vulnerability details are made available after the data is uploaded to Cloudant DB) to the IL Component via the `InterledgerEventSending` event and the Public States are updated to reflect the transactions. 
 
-If, however, the supplied `secret` is deemed invalid, the `InterledgerEventRejected` event is emitted, and the process is terminated.  
+If, however, the supplied `secret` is deemed invalid, the `InterledgerEventRejected` event is emitted, and the process is terminated. 
+
+A [serverless web application](http://pm-vulnerability.s3-web.eu-de.cloud-object-storage.appdomain.cloud/) uses a backend API to connect to the Cloudant Database. The vulnerabiity information is automatically uploaded to the Cloudant DB only when the Vendor has verifiably patched the vulnerability or the grace period has expired, thereby safeguarding sensitive information and ensuring timely disclosure of vulnerabilties. 
 
 
 The sequence diagram for the Private Ledger is depicted as follows:
@@ -104,7 +108,16 @@ To run unit tests, type the following command
 ```
 npm run test
 ```
+If you encounter errors loading gRPC binary modules, you could try the following
 
+```
+npm rebuild
+```
+If the above does not work for you, use a different version of node (preferably 8) as follows
+
+```
+nvm use 8
+```
 If you encounter errors during network start or chaincode instantiation, run the following commands
 
 ```
