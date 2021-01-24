@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Vulnerability - a serverless web application</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.0/css/bulma.min.css">
+</head>
+
+<body>
+  <section class="section">
+    <div class="container">
+      <h1 class="title is-1">
+        Vulnerability Records
+      </h1>
+      <p class="subtitle">
+        A serverless web application for SOFIE-ARD
+      </p>
+      <h3 class="title is-3">
+            Disclosed Vulnerabilities
+        </h3>
+        <!---<table class="table" id ="entries" href="#vulentry">
+            <tr>
+                <th>Vendor ID</th>
+                <th>Vulnerability ID</th>
+                <th>Product</th>
+                <th>Vendor</th>
+                <th>Type</th>
+                <th>Severity</th>
+                <th>Description</th>
+                <th>Path</th>
+              </tr>
+          </table>-->
+          <table id="dvTable" class="table table-hover row-clickable"></table>
+      </div>
+  </section>
+<script>
+let xhr = new XMLHttpRequest();
+    // xhr.open('GET', "https://403f6955.eu-gb.apigw.appdomain.cloud/vulnerability/entries", true);
+    // xhr.open('GET', "https://1ca77ba1.eu-gb.apigw.appdomain.cloud/vulnerability/entries", true);
+    xhr.open('GET', "https://d402b46a-a6dc-493a-aa24-955795f7a190-bluemix:b421adb6be6386bd98c22c1cc7a3158f229ee9bf34b1fbf84960b002ae0a3f7d@d402b46a-a6dc-493a-aa24-955795f7a190-bluemix.cloudantnosqldb.appdomain.cloud/database-vulnerability/_all_docs", true);
+    xhr.send();
+    xhr.onreadystatechange = processRequest;
+    function processRequest(e) {
+      if (xhr.readyState == 4 && xhr.status == 200) {
+        let response = JSON.parse(xhr.responseText);
+        console.log(response.rows);
+        var table = document.createElement("TABLE");
+        table.border = "1";
+        var row = table.insertRow(-1);
+        // var a = document.createElement("A");
+        var headerCell = document.createElement("TH");
+        headerCell.innerHTML = "Vulnerability ID";
+        row.appendChild(headerCell);
+        var headerCell = document.createElement("TH");
+        headerCell.innerHTML = "Vendor ID";
+        row.appendChild(headerCell);
+        var headerCell = document.createElement("TH");
+        headerCell.innerHTML = "Product";
+        row.appendChild(headerCell);
+        var headerCell = document.createElement("TH");
+        headerCell.innerHTML = "Vendor";
+        row.appendChild(headerCell);
+        var headerCell = document.createElement("TH");
+        headerCell.innerHTML = "Vulnerability Type";
+        row.appendChild(headerCell);
+        var headerCell = document.createElement("TH");
+        headerCell.innerHTML = "Vulnerability Severity";
+        row.appendChild(headerCell);
+        var headerCell = document.createElement("TH");
+        headerCell.innerHTML = "Vulnerability Description";
+        row.appendChild(headerCell);
+        var headerCell = document.createElement("TH");
+        headerCell.innerHTML = "Vulnerability Location";
+        row.appendChild(headerCell);
+
+        for(var i = 0; i < response.rows.length; i++) {
+          // html += `${response.rows[i].doc.vulnerabilityID}`;
+          var htmlString = "https://d402b46a-a6dc-493a-aa24-955795f7a190-bluemix:b421adb6be6386bd98c22c1cc7a3158f229ee9bf34b1fbf84960b002ae0a3f7d@d402b46a-a6dc-493a-aa24-955795f7a190-bluemix.cloudantnosqldb.appdomain.cloud/database-vulnerability/"+response.rows[i].id;
+         // var htmlString = "http://pm-vulnerability-records.s3-web.eu-gb.cloud-object-storage.appdomain.cloud/#"+response.rows[i].doc.vulnerabilityID;
+         // var htmlString = "https://f1ab26d4-7cce-4f62-bbe9-df56b09ed5bc-bluemix.cloudant.com/vulnerability/"+response.rows[i].doc._id;
+          var aID = `entries${response.rows[i].doc.vulnerabilityID}`;
+          var url = new URL(htmlString);
+          console.log(htmlString);
+          console.log(aID);
+          // document.getElementById('entries').innerHTML = html;
+          row = table.insertRow(-1); //creates new row
+          // row.id = aID; // if you want to set id of row
+          // row.innerHTML = `<a href=${htmlString}></a>`;
+          // row.onmouseover = function(){row.style.backgroundColor = "yellow";};
+          var cell = row.insertCell(-1); // creates new column
+          var a = document.createElement("A");
+          a.href=htmlString;
+          a.onclick = function()
+          {
+            window.history.pushState("stateObj", "new page", url);
+            document.location.href = url; 
+
+          }
+          a.appendChild(document.createTextNode(response.rows[i].doc.vulnerabilityID));
+          cell.appendChild(a);
+          cell.onclick = function () {
+            // Get the row id where the cell exists
+            // window.location = url;
+            // window.open(url);
+            var rowId = this.parentNode.rowIndex;
+
+            var rowsNotSelected = table.getElementsByTagName('tr');
+            for (var row = 0; row < rowsNotSelected.length; row++) {
+                rowsNotSelected[row].style.backgroundColor = "";
+                rowsNotSelected[row].classList.remove('selected');
+            }
+            var rowSelected = table.getElementsByTagName('tr')[rowId];
+            rowSelected.style.backgroundColor = "turquoise";
+            rowSelected.className += " selected";
+        }
+          // cell.innerHTML = response.rows[i].doc.vendorID; // put data in column
+          var cell = row.insertCell(-1);
+          cell.innerHTML = response.rows[i].doc.vendorID;
+          cell.onclick = function () {
+            // Get the row id where the cell exists
+            var rowId = this.parentNode.rowIndex;
+
+            var rowsNotSelected = table.getElementsByTagName('tr');
+            for (var row = 0; row < rowsNotSelected.length; row++) {
+                rowsNotSelected[row].style.backgroundColor = "";
+                rowsNotSelected[row].classList.remove('selected');
+            }
+            var rowSelected = table.getElementsByTagName('tr')[rowId];
+            rowSelected.style.backgroundColor = "turquoise";
+            rowSelected.className += " selected";
+        }
+          var cell = row.insertCell(-1);
+          cell.innerHTML = response.rows[i].doc.productName;
+          cell.onclick = function () {
+            // Get the row id where the cell exists
+            var rowId = this.parentNode.rowIndex;
+
+            var rowsNotSelected = table.getElementsByTagName('tr');
+            for (var row = 0; row < rowsNotSelected.length; row++) {
+                rowsNotSelected[row].style.backgroundColor = "";
+                rowsNotSelected[row].classList.remove('selected');
+            }
+            var rowSelected = table.getElementsByTagName('tr')[rowId];
+            rowSelected.style.backgroundColor = "turquoise";
+            rowSelected.className += " selected";
+        }
+          var cell = row.insertCell(-1);
+          cell.innerHTML = response.rows[i].doc.vendorName;
+          cell.onclick = function () {
+            // Get the row id where the cell exists
+            var rowId = this.parentNode.rowIndex;
+
+            var rowsNotSelected = table.getElementsByTagName('tr');
+            for (var row = 0; row < rowsNotSelected.length; row++) {
+                rowsNotSelected[row].style.backgroundColor = "";
+                rowsNotSelected[row].classList.remove('selected');
+            }
+            var rowSelected = table.getElementsByTagName('tr')[rowId];
+            rowSelected.style.backgroundColor = "turquoise";
+            rowSelected.className += " selected";
+        }
+          var cell = row.insertCell(-1);
+          cell.innerHTML = response.rows[i].doc.vulnerabilitySeverity;
+          cell.onclick = function () {
+            // Get the row id where the cell exists
+            var rowId = this.parentNode.rowIndex;
+
+            var rowsNotSelected = table.getElementsByTagName('tr');
+            for (var row = 0; row < rowsNotSelected.length; row++) {
+                rowsNotSelected[row].style.backgroundColor = "";
+                rowsNotSelected[row].classList.remove('selected');
+            }
+            var rowSelected = table.getElementsByTagName('tr')[rowId];
+            rowSelected.style.backgroundColor = "turquoise";
+            rowSelected.className += " selected";
+        }
+          var cell = row.insertCell(-1);
+          cell.innerHTML = response.rows[i].doc.vulnerabilityType;
+          cell.onclick = function () {
+            // Get the row id where the cell exists
+            var rowId = this.parentNode.rowIndex;
+
+            var rowsNotSelected = table.getElementsByTagName('tr');
+            for (var row = 0; row < rowsNotSelected.length; row++) {
+                rowsNotSelected[row].style.backgroundColor = "";
+                rowsNotSelected[row].classList.remove('selected');
+            }
+            var rowSelected = table.getElementsByTagName('tr')[rowId];
+            rowSelected.style.backgroundColor = "turquoise";
+            rowSelected.className += " selected";
+        }
+          var cell = row.insertCell(-1);
+          cell.innerHTML = response.rows[i].doc.vulnerabilityDesc;
+          cell.onclick = function () {
+            // Get the row id where the cell exists
+            var rowId = this.parentNode.rowIndex;
+
+            var rowsNotSelected = table.getElementsByTagName('tr');
+            for (var row = 0; row < rowsNotSelected.length; row++) {
+                rowsNotSelected[row].style.backgroundColor = "";
+                rowsNotSelected[row].classList.remove('selected');
+            }
+            var rowSelected = table.getElementsByTagName('tr')[rowId];
+            rowSelected.style.backgroundColor = "turquoise";
+            rowSelected.className += " selected";
+        }
+          var cell = row.insertCell(-1);
+          cell.innerHTML = response.rows[i].doc.vulnerabilityPath;
+          cell.onclick = function () {
+            // Get the row id where the cell exists
+            var rowId = this.parentNode.rowIndex;
+
+            var rowsNotSelected = table.getElementsByTagName('tr');
+            for (var row = 0; row < rowsNotSelected.length; row++) {
+                rowsNotSelected[row].style.backgroundColor = "";
+                rowsNotSelected[row].classList.remove('selected');
+            }
+            var rowSelected = table.getElementsByTagName('tr')[rowId];
+            rowSelected.style.backgroundColor = "turquoise";
+            rowSelected.className += " selected";
+        }
+        }
+        // update the web page
+        //document.getElementById('entries').innerHTML = html;
+        var dvTable = document.getElementById("dvTable");
+        dvTable.innerHTML = "";
+        dvTable.appendChild(table);
+      }
+    }
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.10/handlebars.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+</body>
+
+</html>

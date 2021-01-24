@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SOFIE ARD - a serverless web application</title>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.6.0/css/bulma.min.css">
+</head>
+
+<body>
+  <section class="section">
+    <div class="container">
+      <h1 class="title is-1">
+        Automated Responsible Disclosure
+      </h1>
+      <p class="subtitle">
+        
+      </p>
+
+      <div class="columns">
+        <div class="column">
+          <h3 class="title is-3">
+            Disclosed Vulnerabilities
+          </h3>
+          <div id="entries"></div>
+        </div>
+        <!--<div class="column">
+          <h3 class="title is-3">
+            Add your message
+          </h3>
+          <form id="addEntry">
+            <div class="field">
+              <label class="label">Name</label>
+              <div class="control">
+                <input class="input" type="text" placeholder="your name" id="name">
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">Email</label>
+              <div class="control">
+                <input class="input" type="text" placeholder="your email" id="email">
+              </div>
+            </div>
+            <div class="field">
+              <label class="label">Comment</label>
+              <div class="control">
+                <textarea class="textarea" placeholder="your comment" id="comment"></textarea>
+              </div>
+            </div>
+            <div class="control">
+              <button class="button is-primary">Send your message</button>
+            </div>
+          </form>
+        </div>-->
+      </div>
+    </div>
+  </section>
+
+  <script id="entries-template" type="text/x-handlebars-template">
+    {{#each entries}}
+    {{#if vendorName}}
+    <div class="box">
+      <article class="media">
+        <div class="media-content">
+          <div class="content">
+            <p>
+              <strong>ID : {{vulnerabilityID}}</strong>
+              <br>Vendor : {{vendorName}} 
+              <br> Product : {{productName}}
+              <!--<br> Approved on : {{approvedOn}}-->
+              <br> Grace Period : {{gracePeriod}}
+              <!--<br> Status : {{status}}--> 
+              <form action="https://d402b46a-a6dc-493a-aa24-955795f7a190-bluemix.cloudantnosqldb.appdomain.cloud/database-vulnerability/_design/show_example/_show/Beu/{{vulnerabilityID}}">
+                <input type="submit" value="Learn More"  style="padding: 10px 20px;font-size: 12px;background-color: white;border-color:teal;color:teal;cursor: pointer"/>
+            </form>
+              <!--<br><a href="https://d402b46a-a6dc-493a-aa24-955795f7a190-bluemix.cloudantnosqldb.appdomain.cloud/database-vulnerability/_design/show_example/_show/Beu/{{vulnerabilityID}}">Learn More</a>-->
+            </p>
+          </div>
+        </div>
+      </article>
+    </div>
+    {{/if}}
+    {{/each}}
+  </script>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/handlebars.js/4.0.10/handlebars.min.js"></script>
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+  <script src="vulnerability.js"></script>
+</body>
+<!---var url = "https://d402b46a-a6dc-493a-aa24-955795f7a190-bluemix:b421adb6be6386bd98c22c1cc7a3158f229ee9bf34b1fbf84960b002ae0a3f7d@d402b46a-a6dc-493a-aa24-955795f7a190-bluemix.cloudantnosqldb.appdomain.cloud/database-vulnerability/"+{{vulnerabilityID}};
+    -->
+</html>

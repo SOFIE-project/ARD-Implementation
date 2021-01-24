@@ -2,7 +2,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { VulnerabilityContract } from './vulnerability-contract';
-export { VulnerabilityContract } from './vulnerability-contract';
+import { VulnerabilityRecordsContract } from './vulnerability-records-contract';
+export { VulnerabilityRecordsContract } from './vulnerability-records-contract';
 
-export const contracts: any[] = [ VulnerabilityContract ];
+export const contracts: any[] = [ VulnerabilityRecordsContract ];
