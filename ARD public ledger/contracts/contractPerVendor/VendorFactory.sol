@@ -15,7 +15,7 @@ contract VendorFactory is Ownable {
 
     /**
         @notice Instantiate a contract of type VendorContract with _vendor as its owner
-        @dev This function reverts if ownership has not been tranfered (see ARD document for motivation)
+        @dev This function reverts if ownership has not been tranfered (see ARD document for explaination)
         @param _vendor The owner of the new VendorContract
      */
     function createVendorContract(address _vendor) onlyOwner public virtual returns(VendorContract) {

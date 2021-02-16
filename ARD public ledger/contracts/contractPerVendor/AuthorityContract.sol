@@ -33,7 +33,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
     // Logs
 
     event LogVulnerabilityNew(uint indexed vulnerabilityId, address indexed expert, address indexed vendor, bytes32 hashlock, bytes32 vulnerabilityHash    );
-    event LogVulnerabilityApproval(uint indexed vulnerabilityId, uint32 ackTimelock, uint32 timelock, VendorContract.State state, string motivation);
+    event LogVulnerabilityApproval(uint indexed vulnerabilityId, uint32 ackTimelock, uint32 timelock, VendorContract.State state, string reason);
     event LogVulnerabilityDisclose(uint indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation);
     event LogVulnerabilityPatched(uint indexed vulnerabilityId, bool patched, bool timelock_expired);
 
@@ -255,13 +255,12 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         @param _ackTimelock UNIX epoch in seconds the vendor has to acknowledge
         @param _timelock The timelock in UNIX epoch time
         @param _decision The approval decision flag
-        @param _motivation The motivation string
-        @dev Emits LogVulnerabilityApproval(uint indexed vulnerabilityId, uint32 timelock, VendorContract.State state, string motivation)
+        @param _reason The reason string
+        @dev Emits LogVulnerabilityApproval(uint indexed vulnerabilityId, uint32 timelock, VendorContract.State state, string reason)
         @dev Only the Authority owner, _vulnerabilityId exists
      */
-    function approve(uint _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock, ApprovedType _decision, string memory _motivation)
-        public
-        onlyOwner()
+    function approve(uint _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock, ApprovedType _decision, string memory _reason)
+        private
         futureTimelock(_ackTimelock,_timelock)
         vulnerabilityExists(_vulnerabilityId){
 
@@ -293,7 +292,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
             _ackTimelock,
             _timelock,
             _newState,
-            _motivation
+            _reason
         );
 
     }
@@ -347,21 +346,14 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
     }
 
     /**
-        @dev Inherited from InterledgerReceiverInterface 
+        @param id The id of the vulnerability
+        @param location The link where the vulnerability has been published
         @dev Emits LogVulnerabilityDisclose(uint indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation)
-        @dev Only the interledger component
-     */
-    function interledgerReceive(uint256 nonce, bytes memory data)   
-        override public onlyInterledger {
 
-        // Decoding
-        // Get the Id from the data field
-        uint id;
-        string memory id_string;
-        string memory location;
-        (id_string, location) = abi.decode(data, (string, string));
-        
-        id=uint(parseInt(id_string));
+     */
+
+    function publishVulnerability(uint id,string memory location)   
+        private {
 
         // Retrive VendorContract
         require(haveVulnerability(id), "vulnerabilityId does not exist");
@@ -379,6 +371,41 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         vendorContract.setLocation(id, location);
 
         emit LogVulnerabilityDisclose(id, msg.sender, location);
+
+    }
+
+
+    /**
+        @dev Call approve or publish vulnerability based on _approve value
+        @dev Inherited from InterledgerReceiverInterface
+        @dev Emits InterledgerEventAccepted(nonce)
+        @dev Only the interledger component
+     */
+
+    function interledgerReceive(uint256 nonce, bytes memory data)
+        override public onlyInterledger {
+
+        (bool _approve, uint _vulnerabilityId,bytes memory info) =  abi.decode(data,(bool,uint,bytes));
+        if(_approve){
+            (
+            uint32 _ackTimelock,
+            uint32 _timelock,
+            uint8 _decision,
+            string memory _reason
+            ) = abi.decode(info,
+                (
+                uint32,
+                uint32,
+                uint8,
+                string
+                )
+                );
+            approve(_vulnerabilityId,_ackTimelock,_timelock, ApprovedType, _decision,_reason);
+        }
+        else{
+            (string memory _location)=abi.decode(info,string);
+            publishVulnerability(_vulnerabilityId,_location);
+        }
         emit InterledgerEventAccepted(nonce);
     }
 
@@ -403,15 +430,15 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
     /**
         @notice Cancels the vulnerability bounty
         @param _vulnerabilityId The vulnerability identifier, uint
-        @param _motivation The motivation why vulnerability has been deleted, string
+        @param _reason The reason why vulnerability has been deleted, string
         @dev Only the owner, _vulnerabilityId exists
      */
-    function cancelBounty(uint _vulnerabilityId, string calldata _motivation) external onlyOwner {
+    function cancelBounty(uint _vulnerabilityId, string calldata _reason) external onlyOwner {
 
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        vendorContract.cancelBounty(_vulnerabilityId, _motivation);
+        vendorContract.cancelBounty(_vulnerabilityId, _reason);
     }
 
     /**
@@ -440,7 +467,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         (,VendorContract.State _state,,uint _timelock,uint _acktimelock,,)=vendorContract.getVulnerabilityInfo(_vulnerabilityId);
         return  ((_state == VendorContract.State.Valid && _acktimelock < block.timestamp ) || (_state == VendorContract.State.Acknowledged && _timelock < block.timestamp));
     }
-    
+    /*
 /**utility funtion for parsing
 
     /**
@@ -449,7 +476,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         @return int
      */
     
-    function parseInt(string memory _a) public pure returns (int) {
+    /*function parseInt(string memory _a) public pure returns (int) {
        return parseInt(_a, 0);
     }
 
@@ -458,7 +485,9 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         @param _a String to be barsed, string
          @param _b Reference, uint
         @return int
-     */
+      */
+      
+      /*
 
     function parseInt(string memory _a, uint _b) public pure returns (int) {
        bytes memory bresult = bytes(_a);
@@ -482,5 +511,5 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
        if (negative) mint *= -1;
        return mint;
     }
-
+*/
 }

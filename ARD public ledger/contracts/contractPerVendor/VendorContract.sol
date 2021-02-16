@@ -25,7 +25,7 @@ contract VendorContract is Ownable {
     // Logs
 
     event LogVulnerabilityAcknowledgment(uint indexed vulnerabilityId, address indexed vendor, uint bounty);
-    event LogBountyCanceled(uint indexed vulnerabilityId, string motivation);
+    event LogBountyCanceled(uint indexed vulnerabilityId, string reason);
     event ProductRegistered(bytes32 indexed productId);
     event ProductUnregistered(bytes32 indexed productId);
 
@@ -225,11 +225,11 @@ contract VendorContract is Ownable {
     /**
         @notice Cancel the bounty assigned to a vulnerability
         @param _vulnerabilityId The vulnerability identifier, uint
-        @param _motivation The motivation why vulnerability has been deleted, string
-        @dev Emits LogBountyCanceled(uint indexed vulnerabilityId, string motivation)
+        @param _reason The reason why vulnerability has been deleted, string
+        @dev Emits LogBountyCanceled(uint indexed vulnerabilityId, string reason)
         @dev Only the authority
     */
-    function cancelBounty(uint _vulnerabilityId, string calldata _motivation) external onlyAuhtority {
+    function cancelBounty(uint _vulnerabilityId, string calldata _reason) external onlyAuhtority {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
 
@@ -240,7 +240,7 @@ contract VendorContract is Ownable {
         v.reward.amount = 0;
         balanceOwner += amount;
 
-        emit LogBountyCanceled(_vulnerabilityId, _motivation);
+        emit LogBountyCanceled(_vulnerabilityId, _reason);
     }
 
     /**
