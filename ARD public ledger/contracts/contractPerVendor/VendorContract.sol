@@ -33,7 +33,7 @@ contract VendorContract is Ownable {
 
     modifier onlyAuhtority {
 
-        require(msg.sender == authority, "The caller is not the authority");
+        require(msg.sender == authority, "The caller is not the authority contract");
         _;
     }
 
@@ -191,7 +191,7 @@ contract VendorContract is Ownable {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
 
-        require(v.timelock == 0, "Timelock has been set already");
+        require(v.timelock == 0, "Timelock already set");
         v.ackTimelock = _ackTimelock;
         v.timelock = _timelock;
     }
@@ -206,7 +206,7 @@ contract VendorContract is Ownable {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
 
-        require(v.secret == 0, "Secret has been set already");
+        require(v.secret == 0, "Secret already set");
         v.secret = _secret;
     }
 
@@ -518,4 +518,14 @@ contract VendorContract is Ownable {
     receive() external payable onlyOwner {
         balanceOwner += msg.value;
     }
+
+
+    // Debug functions (to remove)
+   function debug_setTimelock(uint _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock) external {
+
+        Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
+
+        v.ackTimelock = _ackTimelock;
+        v.timelock = _timelock;
+    }    
 }

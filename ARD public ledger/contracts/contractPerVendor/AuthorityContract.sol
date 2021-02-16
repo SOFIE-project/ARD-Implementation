@@ -33,7 +33,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
     // Logs
 
     event LogVulnerabilityNew(uint indexed vulnerabilityId, address indexed expert, address indexed vendor, bytes32 hashlock, bytes32 vulnerabilityHash    );
-    event LogVulnerabilityApproval(uint indexed vulnerabilityId, uint32 ackTimelock, uint32 timelock, VendorContract.State state, string reason);
+    event LogVulnerabilityApproval(uint indexed vulnerabilityId, uint32 ackTimelock, uint32 timelock, VendorContract.State state);
     event LogVulnerabilityDisclose(uint indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation);
     event LogVulnerabilityPatched(uint indexed vulnerabilityId, bool patched, bool timelock_expired);
 
@@ -51,14 +51,12 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         _;
     }
 
-    modifier futureTimelock(uint32 _time1, uint32 _time2) {
+    // modifier futureTimelock(uint32 _ackTimelock, uint32 _patchTimelock) {
     
-        // The timelocks are after the last blocktime (now).
-        require(_time1 > uint32(block.timestamp) && _time2 > uint32(block.timestamp) , "timelocks must be in the future");
-        // The timelock time is after the last blocktime (now).
-        require(_time2 > _time1, "timelock shuold be greater than ack timelock");
-        _;
-    }
+    //     require(_time1 > uint32(block.timestamp) && _time2 > uint32(block.timestamp) , "timelocks must be in the future");
+    //     require(_time2 > _time1, "timelock shuold be greater than ack timelock");
+    //     _;
+    // }
 
     modifier vulnerabilityExists(uint _vulnerabilityId) {
 
@@ -84,7 +82,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         bool registered;
     }
 
-    enum ApprovedType { Approved, Invalid, Duplicate }
+    // enum ApprovedType { Approved, Invalid, Duplicate }
 
     // Maps and arrays
 
@@ -250,51 +248,71 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
     }
 
     /**
-        @notice Approves, or not, the vulnerability contract and provides the lock terms.
+        @notice Approve the vulnerability contract and provides the lock terms.
         @param _vulnerabilityId The vulnerability identifier, uint
-        @param _ackTimelock UNIX epoch in seconds the vendor has to acknowledge
-        @param _timelock The timelock in UNIX epoch time
-        @param _decision The approval decision flag
-        @param _reason The reason string
-        @dev Emits LogVulnerabilityApproval(uint indexed vulnerabilityId, uint32 timelock, VendorContract.State state, string reason)
+        @dev Emits LogVulnerabilityApproval(uint indexed vulnerabilityId, uint32 timelock, VendorContract.State state)
         @dev Only the Authority owner, _vulnerabilityId exists
      */
-    function approve(uint _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock, ApprovedType _decision, string memory _reason)
+    // function _approve(uint _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock, ApprovedType _decision, string memory _reason)
+    function _approve(uint _vulnerabilityId)
         private
-        futureTimelock(_ackTimelock,_timelock)
-        vulnerabilityExists(_vulnerabilityId){
+        // futureTimelock(_ackTimelock, _timelock)
+        vulnerabilityExists(_vulnerabilityId) {
 
         // Retrive VendorContract
         address _vendor = VendorVulnerabilities[_vulnerabilityId];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
+        uint32 _ackTimelock = uint32(block.timestamp + 1 weeks);
+        uint32 _patchTimelock = uint32(_ackTimelock + 12 weeks);
 
         (,VendorContract.State _state,,,,,)=vendorContract.getVulnerabilityInfo(_vulnerabilityId);
         require(_state == VendorContract.State.Pending, "The vulnerability should be in pending state");
 
         // Reject if the contract isn't aprroved (the verification is off chain)
-        VendorContract.State _newState;
+        vendorContract.setTimelock(_vulnerabilityId, _ackTimelock, _patchTimelock);
+        vendorContract.setState(_vulnerabilityId, VendorContract.State.Valid);
 
-        if(_decision == ApprovedType.Invalid) 
-            _newState = VendorContract.State.Invalid;
+        // VendorContract.State _newState = VendorContract.State.Valid;
+        // if(_decision == ApprovedType.Invalid) 
+        //     _newState = VendorContract.State.Invalid;
 
-        else if(_decision == ApprovedType.Duplicate)
-            _newState = VendorContract.State.Duplicate;
+        // else if(_decision == ApprovedType.Duplicate)
+        //     _newState = VendorContract.State.Duplicate;
 
-        else {
-            vendorContract.setTimelock(_vulnerabilityId,_ackTimelock,_timelock);
-            _newState = VendorContract.State.Valid;
-        }
+        // else {
+        //     _newState = VendorContract.State.Valid;
+        //     vendorContract.setTimelock(_vulnerabilityId, _ackTimelock, _patchTimelock);
+        // }
 
-        vendorContract.setState(_vulnerabilityId, _newState);
 
         emit LogVulnerabilityApproval(
             _vulnerabilityId,
             _ackTimelock,
-            _timelock,
-            _newState,
-            _reason
+            _patchTimelock,
+            VendorContract.State.Valid
         );
+    }
 
+    /**
+        @notice Approve the vulnerability contract and provides the lock terms.
+        @param _vulnerabilityId The vulnerability identifier, uint
+        @param _flag true if Invalid vulnerability, false if Duplicate vulnerability
+        @dev Emits LogVulnerabilityApproval(uint indexed vulnerabilityId, uint32 timelock, VendorContract.State state)
+        @dev Only the Authority owner, _vulnerabilityId exists
+     */
+    function reject(uint _vulnerabilityId, bool _flag) external onlyOwner vulnerabilityExists(_vulnerabilityId) {
+
+        address _vendor = VendorVulnerabilities[_vulnerabilityId];
+        VendorContract vendorContract = vendorRecords[_vendor]._contract;
+
+        if(_flag) {
+            vendorContract.setState(_vulnerabilityId, VendorContract.State.Invalid);        
+            emit LogVulnerabilityApproval(_vulnerabilityId, 0, 0, VendorContract.State.Invalid);
+        }
+        else {
+            vendorContract.setState(_vulnerabilityId, VendorContract.State.Duplicate);        
+            emit LogVulnerabilityApproval(_vulnerabilityId, 0, 0, VendorContract.State.Duplicate);
+        }
     }
 
 
@@ -349,15 +367,12 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         @param id The id of the vulnerability
         @param location The link where the vulnerability has been published
         @dev Emits LogVulnerabilityDisclose(uint indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation)
-
      */
+    function _disclose(uint id, string memory location) private vulnerabilityExists(id) {
 
-    function publishVulnerability(uint id,string memory location)   
-        private {
+        // require(haveVulnerability(id), "vulnerabilityId does not exist");
 
         // Retrive VendorContract
-        require(haveVulnerability(id), "vulnerabilityId does not exist");
-
         address _vendor = VendorVulnerabilities[id];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
@@ -371,41 +386,41 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         vendorContract.setLocation(id, location);
 
         emit LogVulnerabilityDisclose(id, msg.sender, location);
-
     }
 
 
     /**
-        @dev Call approve or publish vulnerability based on _approve value
+        @dev Communicate the approval, or the disclosure, of a vulnerability
         @dev Inherited from InterledgerReceiverInterface
         @dev Emits InterledgerEventAccepted(nonce)
         @dev Only the interledger component
      */
+    function interledgerReceive(uint256 nonce, bytes memory data) override public onlyInterledger {
 
-    function interledgerReceive(uint256 nonce, bytes memory data)
-        override public onlyInterledger {
+        (uint _vulnerabilityId, bool _approved, bytes memory payload) =  abi.decode(data, (uint, bool, bytes));
 
-        (bool _approve, uint _vulnerabilityId,bytes memory info) =  abi.decode(data,(bool,uint,bytes));
-        if(_approve){
-            (
-            uint32 _ackTimelock,
-            uint32 _timelock,
-            uint8 _decision,
-            string memory _reason
-            ) = abi.decode(info,
-                (
-                uint32,
-                uint32,
-                uint8,
-                string
-                )
-                );
-            approve(_vulnerabilityId,_ackTimelock,_timelock, ApprovedType, _decision,_reason);
+        if(_approved) {
+
+            // string memory 
+            // (uint32 _ackTimelock,
+            // uint32 _timelock,
+            // uint8 _decision,
+            // string memory _reason
+            // ) = abi.decode(payload,
+            //     (
+            //     uint32,
+            //     uint32,
+            //     uint8,
+            //     string
+            //     )
+            //     );
+            _approve(_vulnerabilityId);
         }
         else{
-            (string memory _location)=abi.decode(info,string);
-            publishVulnerability(_vulnerabilityId,_location);
+            string memory _location = abi.decode(payload, (string));
+            _disclose(_vulnerabilityId, _location);
         }
+
         emit InterledgerEventAccepted(nonce);
     }
 
