@@ -1,8 +1,12 @@
 # Migration folder
 
-This folder contains the Truffle migration files. The file `2_interledger_setup.js` is a script to deploy the smart contracts and set them up in a condition that is possible to test Interledger. Namely, the script creates the required Authority and Vendor contracts, creates a product, and a vulnerability submission that is approved and acknowledged. The script has also the goal to show the flow of calls.
+This folder contains the Truffle migration files. The file `2_interledger_setup.js` is a script to deploy the smart contracts and set them up in a condition that is possible to test Interledger. **NOTE: the script does not invoke Interledger, but sets up the contract prior calling Intelredger.**. Namely, the script creates the required Authority and Vendor contracts, creates a product, and a vulnerability report.
 
-To differentiate two testing conditions, the patch from the Vendor and the grace period, the configuration file `../truffle-config.js` exposes two aliases of the same network: this allows the `2_interledger_setup.js` to setup a smaller or bigger timelock.
+There are two scenarios involving Interledger:
+- (1) Interledger is triggered to approve a vulnerability reported by an expert. The communication comes from the private ledger, so this step calls the *interledgerReceive* function in the Authority smart contract;
+- (2) Interledger is triggered to disclose an acknowledged vulnerability. The communcation is two sided: it begins with the caller invoking the *publishSecret* function on the Authority smart contract, and later Interledger invokes the *interledgerReceive* function on the same contract. In this scenario there are two conditions to disclose a vulnerability: (2.1)with a patch, (2.2) or after the expiration of the grance period.
+
+To differentiate testing cases, the configuration file `../truffle-config.js` exposes three aliases of the same network: `to_approve`, `to_patch`, and `to_grace_period`. That means the configuration of ganache is the same, but it helps the `2_interledger_setup.js` script to differentiate between the three cases described above (1, 2.1, 2.2 respectively).
 
 The following guide explains how to work with a local testing network, like ganache-cli.
 
@@ -17,15 +21,29 @@ Running the `2_interledger_setup.js` will print con console all the data, accoun
 
 As said, there are two network aliases to run the script.
 
-### 1st condition: Patched by the vendor
+### Test case (1): Approve a vulnerability
+
+Run the script with the following Truffle command:
+
+    truffle migrate --network to_approve --reset
+
+(--reset is required to force Truffle to run the script a second time and so on).
+
+The Authority smart contract has a new vulnerability report ready to be approved.
+
+Next step: Interledger should trigger the smart contract with an operation beginning from chaincode. The `vulnerability id` and the `payload` that chaincode should produce to pass to interledger are printed on the console.
+
+### Test case (2.1): Disclose a vulnerability patched by the vendor
 
 Run the script with the following Truffle command:
 
     truffle migrate --network to_patch --reset
 
-(--reset is required to force Truffle to run the script a second time and so on). In this case, the timelock to patch a vulnerability is set to 100000 seconds. Therefore the Vendor has the time required to provide a patch, and test the condition that is the Vendor calling the smart contract with the secret, and thus triggering Interledger.
+In this case, the timelock to patch a vulnerability is set to 100000 seconds. Therefore the Vendor has the time required to provide a patch, and test the condition that is the Vendor calling the smart contract with the secret, and thus triggering Interledger.
 
-### 2nd condition: Grace period exipres
+Next step: the *publishSecret* function exposed by the Auhtority smart contract needs to be invoked by the vendor.
+
+### Test case (2.2): Disclose a vulnerability after the expiration of the grace period
 
 Run the script with the following Truffle command:
 
@@ -33,6 +51,7 @@ Run the script with the following Truffle command:
 
 In this case, the timelock to patch a vulnerability is set to 10 seconds. So it is possible to test the condition that the Expert, or the Authority, can trigger the disclosure procedure by revealing the secret. NOTE: the Vendor can also trigger the disclosure procedure, but an event will notify that the grace period has expired.
 
+Next step: the *publishSecret* function exposed by the Auhtority smart contract needs to be invoked by anyone.
 
 ## Publish the secret
 
@@ -44,10 +63,12 @@ await authorityC.publishSecret(vulnerabilityId, secret, {from: expert});
 await authorityC.publishSecret(vulnerabilityId, secret, {from: vendor});
 ```
 
-Or via Truffle console (after running the script), but in this case is required to retrieve all the variables (like contract instancea and addresses). For example:
+Or via Truffle console (after running the script), but in this case is required to retrieve all the variables (i.e. the contract instances and addresses). For example, with the `to_patch` network:
 
-    truffle console --network to_patch //recall, to_patch or to_grace_period are aliases//
+    # Terminal (bash etc...)
+    truffle console --network to_patch 
 
+    # Commands in the truffle console
     console)> const expert = "expert address (printed by script)"
     console)> const secret = 123
     console)> const authorityC = await AuthorityContract.deployed()
@@ -55,7 +76,7 @@ Or via Truffle console (after running the script), but in this case is required 
 
 ## Note
 
-The accounts of Expert, Authority, Vendor and Interledger are picked from those generated by ganache-cli. If any of those should have a predefined account or address, remeber to substitute the following fields in the script:
+The accounts of Expert, Authority, Vendor and Interledger are picked from those generated by ganache-cli. If any of those should have a predefined account or address, remeber to substitute the following fields in the `2_interledger_setup.js` script:
 
 ```javascript
 let authority = accounts[0];
@@ -68,7 +89,7 @@ Or, alternatively, include in the scripts the code to read them from a configura
 
 ## References
 
-These steps follow the Truffle tool. Truffle provides a wrapper library of web3js called **truffle-contract** that simplifies the syntax and allows methods like `.at()` and `deployed()`.
+These steps follow the Truffle tool. Truffle provides a wrapper library of web3js called **truffle-contract** that simplifies the syntax and allows methods like `.at()` and `.deployed()`.
 
 
 truffle-contract library [documentation](https://www.npmjs.com/package/@truffle/contract);
