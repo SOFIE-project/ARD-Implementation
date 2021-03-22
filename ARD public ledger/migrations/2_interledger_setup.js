@@ -131,8 +131,18 @@ module.exports = async function(deployer, network, accounts) {
     vulnerabilityId = await register_vulnerability(expert, authorityC, vendor, hashlock, productId, vulnerabilityHash);
     console.log("-- Vulnerability registered with ID: " + vulnerabilityId);
 
+    // Interledger data payload
+    const data = web3.eth.abi.encodeParameters(['uint256', 'bool', 'bytes'], [vulnerabilityId.toNumber(), true, "0x0"]);
 
-    if(network == "to_patch") {        
+    if(network == "to_approve") {
+
+        console.log("-- Vulnerability with ID " + vulnerabilityId + "waiting for approval.");
+        console.log("-- Data payload the smart contract expects to receive: " + data);
+        console.log("--- Computed from Solidity's abi.encode() with input: [" + vulnerabilityId.toNumber() + ", " + true + ", 0x0]");
+        return;
+    }
+
+    else if(network == "to_patch") {        
         // Give enough to the grace period
         timelock = Math.round(new Date() / 1000) + 100000;
     }
@@ -143,11 +153,12 @@ module.exports = async function(deployer, network, accounts) {
     }
 
     // Authority: Approve vulnerability
-        // Params: vulnerability id, timelock to acknwoledge, timelock to patch, authority decision, motivation sring
-    await authorityC.approve(vulnerabilityId, ackTimelock, timelock, DECISION.Approved, "", {from: authority});
+    await authority.interledgerReceive(vulnerabilityId, data, {from: interledgerAddress});
     console.log("-- Vulnerability with ID " + vulnerabilityId + " approved. Timelock: " + (timelock - Math.round(new Date() / 1000)) + " seconds");
 
     // Vendor: Acknowledge vulnerability
     await vendorC.acknowledge(vulnerabilityId, bounty, {from: vendor});
     console.log("-- Vulnerability with ID " + vulnerabilityId + " acknowledged. Bounty: " + web3.utils.fromWei(bounty+'', 'ether') + " ETH");
+
+    // **Eventually put here the call to the publishSecret function**
 };
