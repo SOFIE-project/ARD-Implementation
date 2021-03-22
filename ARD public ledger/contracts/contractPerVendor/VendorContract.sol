@@ -12,66 +12,27 @@ contract VendorContract is Ownable {
 
 
     /**
-        @notice The constructor of the contract expects the EOA vendor address to transfer the ownership to, and the address the Authority smart contract
-        @param _vendor The address of the vendor EOA
-        @param _authority The address of the AuthorityContract
+        Contract state attributes
      */
-    constructor(address _vendor, address _authority) public {
 
-        authority = _authority;
-        transferOwnership(_vendor); // Otherwise the owner is the Authority contract
-    }
+    // This variable stores the amount the contract has "free" to pay for the bounties.
+    // A new bounty decreases this amount; funding the contract or cancelling a bounty increase it
+    uint public balanceOwner;       
 
-    // Logs
-
-    event LogVulnerabilityAcknowledgment(uint indexed vulnerabilityId, address indexed vendor, uint bounty);
-    event LogBountyCanceled(uint indexed vulnerabilityId, string reason);
-    event ProductRegistered(bytes32 indexed productId);
-    event ProductUnregistered(bytes32 indexed productId);
-
-    // Modifiers
-
-    modifier onlyAuhtority {
-
-        require(msg.sender == authority, "The caller is not the authority");
-        _;
-    }
-
-    modifier fundsSent() {
-
-        require(msg.value > 0, "msg.value must be > 0");
-        _;
-    }
-
-     modifier vulnerabilityExists(uint _vulnerabilityId) {
-
-        require(haveVulnerability(_vulnerabilityId), "vulnerabilityId does not exist");
-        _;
-    }
-
-    modifier isValid(uint _vulnerabilityId) {
-
-        // Check whether a contract is Valid, i.e. it has been approved
-        require(Vulnerabilities[_vulnerabilityId].state == State.Valid, "State is not Valid");
-        _;
-    }
-
-
-    // State variables
-
-    uint public balanceOwner;       // This variable stores the amount the contract has "free" to pay for the bounties.
-                                    // A new bounty decreases this amount; funding the contract or cancelling a bounty increase it
+    // Address of the authority contract
     address public authority;
 
 
-    // States
+    mapping (uint => Vulnerability) Vulnerabilities;     //mapping vulnerabilityId => vulnerability data structure;
+    mapping (bytes32 => Product) public Products;        // mapping productId => Product data structure
+    bytes32[] public productIdx;                         // a list of vendor's products by product id
 
-    enum State {Pending, Invalid, Valid, Duplicate, Acknowledged, Disclosable, Disclosed}
-    enum RewardState {NULL, SET, CANCELED, SENT}
 
+    /**
+        Structs and Enums
+     */
 
-    // Structs
-
+    // Product data structure
     struct Product {
         uint32 registeredSince;
         uint32 unregisteredSince;
@@ -79,19 +40,20 @@ contract VendorContract is Ownable {
         string productName;
     }
 
+    // Reward data structure
     struct Reward {
-
         RewardState state;
         uint amount;
     }
 
-    // Extra data to track 
+    // Vulnerability additional metadata 
     struct Metadata {
-        uint32 timestamp;                 // The timestamp of the creation of the vulnerability
+        uint32 timestamp;           // The timestamp of the creation of the vulnerability
         bytes32 productId;          // The Id of the product (name and version)
         bytes32 vulnerabilityHash;  // The hash of the vulnerability information
     }
 
+    // Vulnerability data structure 
     struct Vulnerability {
 
         address payable expert; // expert address
@@ -105,15 +67,64 @@ contract VendorContract is Ownable {
         string vulnerabilityLocation;   // A pointer to a location with the vulnerability information
     }
 
-    // Maps
-
-    mapping (uint => Vulnerability) Vulnerabilities; //mapping _vulnerability_id => _vulnerability;
-    mapping (bytes32=> Product) public Products;// mapping productId => Product
-    bytes32[] public productIdx; // a list of vendor's product by product id
-
+    // States of a vulnerability
+    enum State {Pending, Invalid, Valid, Duplicate, Acknowledged, Disclosable, Disclosed}
+    // States of the reward associated to a vulnerability
+    enum RewardState {NULL, SET, CANCELED, SENT}
 
 
-    // External methods (callable only by Authority contract)
+    /**
+        Events
+     */
+
+    event LogVulnerabilityAcknowledgment(uint indexed vulnerabilityId, address indexed vendor, uint bounty);
+    event LogBountyCanceled(uint indexed vulnerabilityId, string reason);
+    event ProductRegistered(bytes32 indexed productId);
+    event ProductUnregistered(bytes32 indexed productId);
+
+
+    /**
+        Modifiers and utility functions
+     */
+
+    modifier onlyAuhtority {
+        require(msg.sender == authority, "The caller is not the authority contract");
+        _;
+    }
+
+    modifier fundsSent() {
+        require(msg.value > 0, "msg.value must be > 0");
+        _;
+    }
+
+    modifier isValid(uint _vulnerabilityId) {
+        // Check whether a contract is Valid, i.e. it has been approved
+        require(Vulnerabilities[_vulnerabilityId].state == State.Valid, "State is not Valid");
+        _;
+    }
+
+
+
+    /**
+        @notice The constructor of the contract expects the EOA vendor address to transfer the ownership to, and the address the Authority smart contract
+        @param _vendor The address of the vendor EOA
+        @param _authority The address of the AuthorityContract
+     */
+    constructor(address _vendor, address _authority) public {
+
+        authority = _authority;
+        transferOwnership(_vendor); // Otherwise the owner is the Authority contract
+    }
+
+
+    /**
+        Methods
+     */
+
+    /**
+        Authority's related methods
+     */
+
 
     /**
         @notice The function is called by the Authority to set up a new vulnerability record
@@ -132,7 +143,7 @@ contract VendorContract is Ownable {
         bytes32 _hashlock
         ) external onlyAuhtority {
 
-        require(productExist(_productId), "Product Id not registered");
+        require(Products[_productId].registered, "Product with input ID is not registered");
 
         // Store the new vulnerability entry
         Reward memory reward = Reward({amount: 0, state: RewardState.NULL});
@@ -146,7 +157,7 @@ contract VendorContract is Ownable {
         Vulnerabilities[vulnerabilityId] = Vulnerability({ 
             expert: _expert,
             hashlock: _hashlock,
-            ackTimelock:0,
+            ackTimelock: 0,
             timelock: 0,
             vulnerabilityLocation: "",
             state: State.Pending,
@@ -191,7 +202,7 @@ contract VendorContract is Ownable {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
 
-        require(v.timelock == 0, "Timelock has been set already");
+        require(v.timelock == 0, "Timelock already set");
         v.ackTimelock = _ackTimelock;
         v.timelock = _timelock;
     }
@@ -206,7 +217,7 @@ contract VendorContract is Ownable {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
 
-        require(v.secret == 0, "Secret has been set already");
+        require(v.secret == 0, "Secret already set");
         v.secret = _secret;
     }
 
@@ -259,7 +270,9 @@ contract VendorContract is Ownable {
     }
 
 
-    // Public methods callable only by the Owner (the vendor)
+    /**
+        Vendor's related methods
+     */
 
 
     /**
@@ -277,7 +290,7 @@ contract VendorContract is Ownable {
             )
         );
 
-        require(!productExist(_productId),"This product already exist");
+        require(!Products[_productId].registered, "This product is already registered");
 
         Product memory newProduct = Product({productName:_productName,
                                                   registeredSince:uint32(block.timestamp),
@@ -286,7 +299,7 @@ contract VendorContract is Ownable {
                                                 });
 
         Products[_productId] = newProduct;     // Store in the map the new pair (_productId, newProduct)
-        productIdx.push(_productId);   // Store vendor address in array
+        productIdx.push(_productId);            // Store vendor address in array
 
         emit ProductRegistered(_productId);
     }
@@ -299,11 +312,11 @@ contract VendorContract is Ownable {
     */
     function unregisterProduct(bytes32 _productId) onlyOwner external {
 
-        require(productIsRegistered(_productId));
-
-        // Deactivate product
+        // Remove (de-activate) product from the smart. contract
         Product storage p = Products[_productId];
-        p.registered=false;
+        require(p.registered, "A product must be registered to un-register it");
+
+        p.registered = false;
         p.unregisteredSince = uint32(block.timestamp);
 
         emit ProductUnregistered(_productId);
@@ -320,11 +333,11 @@ contract VendorContract is Ownable {
     */
     function acknowledge(uint _vulnerabilityId, uint _bounty)
         public
-        vulnerabilityExists(_vulnerabilityId)
         isValid(_vulnerabilityId)
         onlyOwner {
 
         Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
+        require(v.expert != address(0x0), "Vulnerability with input ID is not registered");
 
         require(uint32(block.timestamp) < v.ackTimelock, "The ack timelock has expired");
         require(balanceOwner > _bounty, "Available balance not enough to fund the bounty");
@@ -351,76 +364,28 @@ contract VendorContract is Ownable {
     }
 
 
-    // Getter and Utility
-
     /**
-        @notice Get a product by the array index
-        @param idx The index of the product, uint
-        @return productName The name the product, string
-        @return registeredSince The timestamp of the registration date of the vendor
-        @return unregisteredSince The timestamp of the unregistration date of the vendor (0 if still registered)
-        @return registered True if the vendor is registered, false otherwise
-    */
-    function getProductyIdx(uint idx) public view returns(
-        string memory productName,
-        uint32 registeredSince,
-        uint32 unregisteredSince,
-        bool registered){
-
-        require(idx<productIdx.length, "Out of range");
-        bytes32 productId=productIdx[idx];
-        Product memory p = Products[productId];
-        return (p.productName,p.registeredSince,p.unregisteredSince,p.registered);
-     }
+        Getters and utility functions
+     */
 
 
     /**
-        @notice Get a product by its Id
+        @notice Get a product by its unique identifier, in bytes
         @param _productId The index of the product, uint
         @return productName The name the product, string
         @return registeredSince The timestamp of the registration date of the vendor
         @return unregisteredSince The timestamp of the unregistration date of the vendor (0 if still registered)
         @return registered True if the vendor is registered, false otherwise
     */
-    function getProductById(bytes32 _productId) public view returns(
+    function getProductByUniqueId(bytes32 _productId) public view returns(
         string memory productName,
         uint32 registeredSince,
         uint32 unregisteredSince,
         bool registered) {
 
         Product memory p = Products[_productId];
-        return (p.productName,p.registeredSince,p.unregisteredSince,p.registered);
+        return (p.productName, p.registeredSince, p.unregisteredSince, p.registered);
      }
-
-
-    /**
-        @notice Check whether a product exists
-        @param _productId The id of the product, bytes32
-        @return exists True if the product exists, false otherwise
-    */
-      function productExist(bytes32 _productId)
-        internal
-        view
-        returns (bool exists)
-    {
-        string memory pname=Products[_productId].productName;
-        exists=( bytes(pname).length != 0);
-    }
-
-    /**
-        @notice Check whether a product is registered
-        @param _productId The id of the product, bytes32
-        @return registered True if the product is registered, false otherwise
-    */
-    function productIsRegistered(bytes32 _productId)
-        internal
-        view
-        returns (bool registered)
-    {
-        require(productExist(_productId), "This product doesn't exist");
-        registered=Products[_productId].registered;
-    }
-
 
     /**
         @notice Get the information of a vulnerability
@@ -429,6 +394,7 @@ contract VendorContract is Ownable {
         @return The state of the vulnerability in the process, uint8
         @return The hashlock, bytes32
         @return The timelock, uint32
+        @return The ackTimelock, uint32
         @return The secret, uint
         @return The vulnerability location, string
         @dev The reason the get function has been split is due to StackTooDeep Exception
@@ -477,40 +443,6 @@ contract VendorContract is Ownable {
         return(v.reward.state,v.reward.amount);
     }
 
-
-    /**
-        @dev Check if a vulnerability id exists
-        @param _vulnerabilityId The vulnerability identifier, uint
-        @return exists True if the vulnerability exists, false otherwise
-     */
-    function haveVulnerability(uint _vulnerabilityId)
-        internal
-        view
-        returns (bool exists) {
-        exists = (Vulnerabilities[_vulnerabilityId].expert != address(0));
-    }
-
-    /**
-        @dev Check if the timelock of a vulnerability expired
-        @param _vulnerabilityId The vulnerability identifier, uint
-        @return True if the timelock expired, false otherwise
-     */
-    function isTimelockExpired(uint _vulnerabilityId) public view returns(bool) {
-        Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
-        return block.timestamp > v.timelock;
-    }
-
-    /**
-        @dev Check if a vulnerability id can be patched, i.e. has been Acknowledged
-        @param _vulnerabilityId The vulnerability identifier, uint
-        @return True if the vulnerability state is Acknowledged, false otherwise
-     */
-     function canBePatched(uint _vulnerabilityId) public view returns(bool) {
-        Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
-        return v.state == State.Acknowledged;
-    }
-
-
     /**
         @dev The solidity > 0.6 keyword function to receive ether
         @dev Only by the Owner
@@ -518,4 +450,14 @@ contract VendorContract is Ownable {
     receive() external payable onlyOwner {
         balanceOwner += msg.value;
     }
+
+
+    // Debug functions (to remove)
+   function debug_setTimelock(uint _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock) external {
+
+        Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
+
+        v.ackTimelock = _ackTimelock;
+        v.timelock = _timelock;
+    }    
 }

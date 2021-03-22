@@ -70,7 +70,7 @@ contract("VendorContract", function(accounts) {
             console.log("register product " + tx.receipt.gasUsed);
 
             const p_Id = tx["logs"][0].args.productId;
-            const product = await vendor.getProductById(p_Id);
+            const product = await vendor.getProductByUniqueId(p_Id);
             const block_n = tx.receipt.blockNumber;
             const block = await web3.eth.getBlock(block_n);
          
@@ -87,7 +87,7 @@ contract("VendorContract", function(accounts) {
             await truffleAssert.fails(
                 vendor.registerProduct(productName, {from: vendorAddress}),
                 truffleAssert.ErrorType.REVERT,
-                "This product already exist" // String of the revert
+                "This product is already registered" // String of the revert
             );
         });
     });
@@ -109,7 +109,7 @@ contract("VendorContract", function(accounts) {
 
             const tx = await vendor.unregisterProduct(productId, {from: vendorAddress});
 
-            const product = await vendor.getProductById(productId);
+            const product = await vendor.getProductByUniqueId(productId);
             const block_n = tx.receipt.blockNumber;
             const block = await web3.eth.getBlock(block_n);
             
@@ -129,7 +129,7 @@ contract("VendorContract", function(accounts) {
             await truffleAssert.fails(
                 vendor.unregisterProduct(vulnerabilityHash, {from: vendorAddress}),
                 truffleAssert.ErrorType.REVERT,
-                "This product doesn't exist" // String of the revert
+                "A product must be registered to un-register it" // String of the revert
             );
         });
     });
@@ -180,7 +180,7 @@ contract("VendorContract", function(accounts) {
                 vendor.newVulnerability(vulnerabilityId, expertAddress, hashlock, // wrong product id 
                     vulnerabilityHash, hashlock, {from: authorityAddress}),
                 truffleAssert.ErrorType.REVERT,
-                "Product Id not registered" // String of the revert
+                "Product with input ID is not registered" // String of the revert
             );
         });
 
