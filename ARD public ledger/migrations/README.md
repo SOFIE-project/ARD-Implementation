@@ -4,7 +4,7 @@ This folder contains the Truffle migration files. The file `2_interledger_setup.
 
 There are two scenarios involving Interledger:
 - (1) Interledger is triggered to approve a vulnerability reported by an expert. The communication comes from the private ledger, so this step calls the *interledgerReceive* function in the Authority smart contract;
-- (2) Interledger is triggered to disclose an acknowledged vulnerability. The communcation is two sided: it begins with the caller invoking the *publishSecret* function on the Authority smart contract, and later Interledger invokes the *interledgerReceive* function on the same contract. In this scenario there are two conditions to disclose a vulnerability: (2.1)with a patch, (2.2) or after the expiration of the grance period.
+- (2) Interledger is triggered to disclose an acknowledged vulnerability. The communcation is two sided: it begins with the caller invoking the *publishSecret* function on the Authority smart contract, and later Interledger invokes the *interledgerReceive* function on the same contract. In this scenario there are two conditions to disclose a vulnerability: (2.1) with a patch, (2.2) or after the expiration of the grance period.
 
 To differentiate testing cases, the configuration file `../truffle-config.js` exposes three aliases of the same network: `to_approve`, `to_patch`, and `to_grace_period`. That means the configuration of ganache is the same, but it helps the `2_interledger_setup.js` script to differentiate between the three cases described above (1, 2.1, 2.2 respectively).
 
