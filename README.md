@@ -28,14 +28,6 @@ A security Expert discovers a vulnerability *u* about a product developed by a V
 
 <img width="75%" src="figures/ard-arc.png">
 
-Interledger component enables activity on one ledger to trigger activity on another ledger in an atomic transaction. The ledgers can be of the same or different types (e.g. Ethereum, Hyperledger Fabric and KSI), and once triggered by a specific event, Interledger passes a customisable payload from the initiating ledger to the receiving ledger. The distributed applications utilising the Interledger component then have the flexibility to use the payload to implement any customised features.
-
-Examples of how Interledger can be utilised include:
-- [Transfering Data](/doc/example-data_transfer.rst) from one ledger to another.
-- [Storing Data Hashes](/doc/adapter-ksi.md) stores detailed information in a (private) ledger and a hash of the information is then  stored in a (public) ledger at suitable intervals using Interledger to benefit from the higher trust of a public ledger.
-- [Game Asset Transfer](/doc/example-game_asset_transfer.rst) example provides functionality for managing in-game assets: the assets can either be used in a game or traded between gamers. For both activities, a separate ledger is used and Interledger ensures that each asset is active in only one of the ledgers.
-- [Hash Time Locked Contracts (HTLCs)](/doc/example-HTLC.md) example describes how to use the Interledger to automate the asset exchange between two ledgers when HTLCs are used.
-
 ## Structure of the repository
 
 The root folder contains the code and data forked from the [SOFIE Interledger repository](https://github.com/SOFIE-project/Interledger).
@@ -48,7 +40,7 @@ The **ARD-private-ledger** folder contains the chaincode, in typescript for Hype
 
 Assuming *0xvendor*, *0xauthority*, *0xexpert*, and *0xinterledger* Ethereum addresses of the actors, the figure below shows the flow of operations called to execute the protocol as described above.
 
-<img width="90%" src="figures/ard-full.png">
+<img width="90%" src="figures/ARD-full.png">
 
 The wide arrows are the interledger operations involved in the protocol. The figure below shows the interledger operations in detail, with example the disclosure of a vulnerability: 1) the communication from the public to the private ledger, and 2) the communcaition from the private to the public ledger.
 
