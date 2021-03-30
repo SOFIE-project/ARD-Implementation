@@ -1,0 +1,53 @@
+{
+    "caliper": {
+        "blockchain": "fabric"
+    },
+    "wallet": "/home/prateeti/SOFIE-private-ledger/vulnerability-private-data-collections/caliper-workspace/networks/myWallet",
+    "clients": {"admin": {
+        "client": {
+            "organization": "Org1MSP",
+            "connection": {
+                "timeout": {
+                    "peer": {
+                        "endorser": "300"
+                    },
+                    "orderer": "300"
+                }
+            }
+        }
+    }},
+    "channels": {     
+        "mychannel": {
+        "created": true,
+        "chaincodes": [
+            {
+                "id": "vulnerability-private-data-collections",
+                "version": "0.0.2"
+            }
+        ]
+    }},
+    "certificateAuthorities": {
+        "Org1CA": {
+            "caName": "ca",
+            "url": "http://localhost:17050"
+        }
+    },
+    "name": "Org1",
+    "organizations": {
+        "Org1MSP": {
+            "certificateAuthorities": [
+                "Org1CA"
+            ],
+            "mspid": "Org1MSP",
+            "peers": [
+                "Org1Peer1"
+            ]
+        }
+    },
+    "peers": {
+        "Org1Peer1": {
+            "url": "grpc://localhost:17051"
+        }
+    },
+    "version": "1.0"
+}

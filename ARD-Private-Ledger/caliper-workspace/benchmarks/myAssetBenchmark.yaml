@@ -1,0 +1,29 @@
+---
+test:
+  name: my-asset-benchmark
+  description: Benchmarking for ARD vulnerability 
+  workers:
+    type: local
+    number: 2
+  rounds:
+    - label: queryAsset
+      description: Query asset benchmark test
+      chaincodeId: vulnerability-private-data-collections
+      txDuration: 30
+      rateControl:
+        type: fixed-backlog
+        opts:
+          unfinished_per_client: 2
+      callback: benchmarks/callbacks/queryAssetBenchmark.js
+      arguments:
+        assets: 10
+
+monitor:
+  type:
+  - none
+
+observer:
+  type: local
+  interval: 5
+
+
