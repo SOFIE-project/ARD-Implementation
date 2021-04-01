@@ -132,12 +132,13 @@ module.exports = async function(deployer, network, accounts) {
     console.log("-- Vulnerability registered with ID: " + vulnerabilityId);
 
     // Interledger data payload
-    const data = web3.eth.abi.encodeParameters(['uint256', 'bool', 'bytes'], [vulnerabilityId.toNumber(), true, "0x0"]);
+    const code = 1; // Approve
+    const payload = web3.eth.abi.encodeParameters(['uint256', 'uint', 'bytes'], [vulnerabilityId.toNumber(), code, "0x0"]);
 
     if(network == "to_approve") {
 
         console.log("-- Vulnerability with ID " + vulnerabilityId + "waiting for approval.");
-        console.log("-- Data payload the smart contract expects to receive: " + data);
+        console.log("-- Data payload the smart contract expects to receive: " + payload);
         console.log("--- Computed from Solidity's abi.encode() with input: [" + vulnerabilityId.toNumber() + ", " + true + ", 0x0]");
         return;
     }
@@ -153,7 +154,7 @@ module.exports = async function(deployer, network, accounts) {
     }
 
     // Authority: Approve vulnerability
-    await authority.interledgerReceive(vulnerabilityId, data, {from: interledgerAddress});
+    await authority.interledgerReceive(vulnerabilityId, payload, {from: interledgerAddress});
     console.log("-- Vulnerability with ID " + vulnerabilityId + " approved. Timelock: " + (timelock - Math.round(new Date() / 1000)) + " seconds");
 
     // Vendor: Acknowledge vulnerability

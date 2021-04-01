@@ -374,12 +374,14 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
      */
     function interledgerReceive(uint256 nonce, bytes memory data) override public onlyInterledger {
 
-        (uint _vulnerabilityId, bool _approved, string memory _location) =  abi.decode(data, (uint, bool, string));
+        (uint _vulnerabilityId, uint _code, string memory _location) =  abi.decode(data, (uint, uint, string));
 
-        if(_approved)
+        if(_code==1) // 1: code for Approve
             _approve(_vulnerabilityId);
-        else
+        else if(_code==2) // 2: code for Disclose
             _disclose(_vulnerabilityId, _location);
+        else
+            throw;
 
         emit InterledgerEventAccepted(nonce);
     }
