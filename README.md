@@ -14,10 +14,9 @@
 
 ## Description
 
-This repository contains the code of the Automated Responsible Disclosure project (ARD).
-In order to understand the protocol, you can read about the main concept: [Leveraging Interledger Technologies in IoT Security Risk Management](https://nowpublishers.com/article/Chapter/9781680836820?cId=978-1-68083-683-7.ch14), Lagutin et al.
+This repository contains the code of the Automated Responsible Disclosure project (ARD). ARD provides an automated version of the Responsible Disclosure (RD) process used to manage the disclosure of security vulnerabilites. ARD also solves the key shortcomings of the RD process. The basic idea behind ARD was suggested in [Leveraging Interledger Technologies in IoT Security Risk Management](https://nowpublishers.com/article/Chapter/9781680836820?cId=978-1-68083-683-7.ch14) and more details will be provided in the submitted scientific paper (to be linked here once it has been published).
 
-A security Expert discovers a vulnerability *u* about a product developed by a Vendor. The vulnerability *u* has to be secret until the disclosure, but a subset of its metadata *mu* can be published as proof of existence. They generate a random secret *s*, compute the hashlock *hs = H(s)* and the fingreprint *hu = H(u)* with *H()* hash function.
+In the ARD process, a security Expert discovers a vulnerability *u* about a product developed by a Vendor. The details of  the vulnerability *u* has to be kept secret from the public to avoid exploits of the vulnerability, but a subset of its metadata *mu* can be published as proof of existence. The Expert then generates a random secret *s*, computes the hashlock *hs = H(s)* and the fingreprint *hu = H(u)* with *H()* hash function.
 - Step 1) The Expert stores on the public ledger the tuple *(mu, hs, hu)*, and sends the tuple *(u, s)* to a consortium of security Authorities;
 - Step 2.a) If the Authorities approve the vulnerability, they store the received tuple in a private ledger shared with the involved vendor. The Interledger component automatically catches the event, and notifies on the public ledger the approval of *u*;
 - Step 2.b) The vulnerability is not approved, the Authorities store the information on the public ledger;
