@@ -228,8 +228,9 @@ contract("AuthorityContract", function(accounts) {
 
         it("Should approve a vulnerability", async function() {
 
+            let code = 1; // Approve code
             const motivation = "Vulnerability approved";
-            const data = web3.eth.abi.encodeParameters(['uint256', 'bool', 'bytes'], [vulnerabilityId.toNumber(), true, "0x0"]);
+            const data = web3.eth.abi.encodeParameters(['uint256', 'uint', 'bytes'], [vulnerabilityId.toNumber(), code, "0x0"]);
             // let tx = await authority.approve(vulnerabilityId, ackTimelock, timelock, DECISION.Approved, motivation, {from: authorityAddress});
             let tx = await authority.interledgerReceive(vulnerabilityId, data, {from: interledgerAddress});
             console.log("Interledger receive: approve " + tx.receipt.gasUsed);
@@ -298,7 +299,8 @@ contract("AuthorityContract", function(accounts) {
             tx = await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
             vulnerabilityId = tx["logs"][0].args.vulnerabilityId;
             // await authority.approve(vulnerabilityId, ackTimelock, timelock, DECISION.Approved, "Vulnerability approved", {from: authorityAddress});
-            const data = web3.eth.abi.encodeParameters(['uint256', 'bool', 'string'], [vulnerabilityId.toNumber(), true, "null"]);
+            const code = 1;
+            const data = web3.eth.abi.encodeParameters(['uint256', 'uint', 'string'], [vulnerabilityId.toNumber(), code, "null"]);
             await authority.interledgerReceive(vulnerabilityId, data, {from: interledgerAddress});
             await web3.eth.sendTransaction({
                 from: vendorAddress,
@@ -486,7 +488,8 @@ contract("AuthorityContract", function(accounts) {
             productId = tx["logs"][0].args.productId;
             tx = await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
             vulnerabilityId = tx["logs"][0].args.vulnerabilityId;
-            const data = web3.eth.abi.encodeParameters(['uint256', 'bool', 'string'], [vulnerabilityId.toNumber(), true, "null"]);
+            const code = 1; // Approve
+            const data = web3.eth.abi.encodeParameters(['uint256', 'uint', 'string'], [vulnerabilityId.toNumber(), code, "null"]);
             await authority.interledgerReceive(vulnerabilityId, data, {from: interledgerAddress});
             await web3.eth.sendTransaction({
                 from: vendorAddress,
@@ -501,7 +504,8 @@ contract("AuthorityContract", function(accounts) {
 
             await authority.publishSecret(vulnerabilityId, secret, {from: vendorAddress});
 
-            const data = web3.eth.abi.encodeParameters(['uint256', 'bool', 'string'], [vulnerabilityId.toNumber(), false, vulnerabilityLocation]);
+            const code = 2; // Disclose
+            const data = web3.eth.abi.encodeParameters(['uint256', 'uint', 'string'], [vulnerabilityId.toNumber(), code, vulnerabilityLocation]);
             let tx = await authority.interledgerReceive(nonce, data, {from: interledgerAddress});
             console.log("InterledgerReceive: disclose " + tx.receipt.gasUsed);
 
@@ -529,7 +533,8 @@ contract("AuthorityContract", function(accounts) {
             
             await authority.publishSecret(vulnerabilityId, secret, {from: vendorAddress});
 
-            const data = web3.eth.abi.encodeParameters(['uint256', 'bool', 'string'], [vulnerabilityId.toNumber(), false, vulnerabilityLocation]);
+            const code = 2; // Disclose
+            const data = web3.eth.abi.encodeParameters(['uint256', 'uint', 'string'], [vulnerabilityId.toNumber(), code, vulnerabilityLocation]);
 
             await truffleAssert.fails(
                 authority.interledgerReceive(nonce, data, {from: expertAddress}),
@@ -540,7 +545,8 @@ contract("AuthorityContract", function(accounts) {
 
         it("Should NOT fully disclose the vulnerability: invalid state", async function() {
 
-            const data = web3.eth.abi.encodeParameters(['uint256', 'bool', 'string'], [vulnerabilityId.toNumber(), false, vulnerabilityLocation]);
+            const code = 2; // Disclose
+            const data = web3.eth.abi.encodeParameters(['uint256', 'uint', 'string'], [vulnerabilityId.toNumber(), code, vulnerabilityLocation]);
 
             await truffleAssert.fails(
                 authority.interledgerReceive(nonce, data, {from: interledgerAddress}),
@@ -569,7 +575,8 @@ contract("AuthorityContract", function(accounts) {
             productId = tx["logs"][0].args.productId;
             tx = await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
             vulnerabilityId = tx["logs"][0].args.vulnerabilityId;
-            const data = web3.eth.abi.encodeParameters(['uint256', 'bool', 'string'], [vulnerabilityId.toNumber(), true, "null"]);
+            const code = 1; // Approve
+            const data = web3.eth.abi.encodeParameters(['uint256', 'uint', 'string'], [vulnerabilityId.toNumber(), code, "null"]);
             await authority.interledgerReceive(vulnerabilityId, data, {from: interledgerAddress});
             await web3.eth.sendTransaction({
                 from: vendorAddress,

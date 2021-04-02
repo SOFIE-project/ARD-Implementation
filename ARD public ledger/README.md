@@ -11,7 +11,7 @@
     - [Sending data: interledgerEventSending](#sending-data-interledgereventsending)
     - [Receiving data sending: interledgerReceive](#receiving-data-sending-interledgerreceive)
   - [Testing](#testing)
-  - [Setup for ARD demo](#setup-for-ard-demo)
+  - [Setup the contracts to test Interledger](#setup-the-contracts-to-test-interledger)
   - [Requirements](#requirements)
 
 
@@ -84,12 +84,14 @@ The function *publishSecret* needs to communicate to Interledger the received se
 
 The fuction *interledgerReceive* function is called in two moments. When a vulnerability is approved, the function needs to know which vulnerability id has been approved. When a vulnerability is disclosed, the function needs to know which vulnerability id has been disclosed and the location, URL, containing the vulnerability. To discriminate the two phases, a third parameter, a flag, is used. The function decodes the received *data* in this way:
 
-    (uint _vulnerabilityId, bool _approved, string memory _location) =  abi.decode(data, (uint, bool, string));
+    (uint _vulnerabilityId, uint _code, string memory _location) =  abi.decode(data, (uint, uint, string));
 
-    if(_approved)
+    if(_code==1) 
         _approve(_vulnerabilityId);             // Execute code for the approval
-    else
+    else if(_code==2)
         _disclose(_vulnerabilityId, _location); // Execute code for the disclosure
+    else
+        throw;
 
     emit InterledgerEventAccepted(nonce);
 
@@ -97,14 +99,14 @@ The fuction *interledgerReceive* function is called in two moments. When a vulne
 
 The tests of the smart contracts are in the `test/` folder.
 
-## Setup for ARD demo
+## Setup the contracts to test Interledger
 
 Follow the steps [described here](./migrations/README.md).
 
 ## Requirements
 
-NodeJs, Truffle
+[NodeJs](https://nodejs.org/it/), [Truffle](https://www.trufflesuite.com/truffle)
 
-Install openzeppelin contracts with
+Install [openzeppelin](https://github.com/OpenZeppelin/openzeppelin-contracts) contracts with
     
     npm install
