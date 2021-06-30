@@ -39,7 +39,9 @@ contract("VendorContract", function(accounts) {
     const vulnerabilityData = "Vulnerability detailed description in text format";
     const vulnerabilityHash = web3.utils.soliditySha3({type: 'string', value: vulnerabilityData});
     const vulnerabilityLocation = "https://organization.org/report_1_test";
-    const vulnerabilityId = web3.utils.soliditySha3({type: 'string', value: vulnerabilityLocation}); // An example of bytes32 for the vulnerabilityId
+    // const vulnerabilityId = web3.utils.soliditySha3({type: 'string', value: vulnerabilityLocation}); // An example of bytes32 for the vulnerabilityId
+    const vulnerabilityId = vulnerabilityHash;
+
 
     describe("Constructor()", function() {
 
@@ -149,7 +151,7 @@ contract("VendorContract", function(accounts) {
 
         it("Should store a new vulnerability record", async function() {
 
-            const tx = await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, vulnerabilityHash, hashlock, {from: authorityAddress});
+            const tx = await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, hashlock, {from: authorityAddress});
 
             const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
             const metadata = await vendor.getVulnerabilityMetadata(vulnerabilityId);
@@ -168,7 +170,6 @@ contract("VendorContract", function(accounts) {
 
             assert.equal(metadata[0], block.timestamp, "The creation timestamp should be " + block.timestamp);
             assert.equal(metadata[1], productId, "The product id should be " + productId);
-            assert.equal(metadata[2], vulnerabilityHash, "The vulnerability hash data should be " + vulnerabilityHash);
 
             assert.equal(reward[0], REWARDSTATE.NULL, "The reward state should be " + REWARDSTATE.NULL + " (NULL)");
             assert.equal(reward[1], 0, "The reward amount should be " + 0);
@@ -178,7 +179,7 @@ contract("VendorContract", function(accounts) {
 
             await truffleAssert.fails(
                 vendor.newVulnerability(vulnerabilityId, expertAddress, hashlock, // wrong product id 
-                    vulnerabilityHash, hashlock, {from: authorityAddress}),
+                    hashlock, {from: authorityAddress}),
                 truffleAssert.ErrorType.REVERT,
                 "Product with input ID is not registered" // String of the revert
             );
@@ -187,7 +188,7 @@ contract("VendorContract", function(accounts) {
         it("Should NOT store a new vulnerability record: wrong caller", async function() {
 
             await truffleAssert.fails(
-                vendor.newVulnerability(vulnerabilityId, expertAddress, productId, vulnerabilityHash, hashlock, {from: expertAddress}),
+                vendor.newVulnerability(vulnerabilityId, expertAddress, productId, hashlock, {from: expertAddress}),
                 truffleAssert.ErrorType.REVERT,
                 "The caller is not the authority" // String of the revert
             );
@@ -205,7 +206,7 @@ contract("VendorContract", function(accounts) {
             vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
             const tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
-            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, vulnerabilityHash, hashlock, {from: authorityAddress});
+            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, hashlock, {from: authorityAddress});
         });
 
         it("setState()", async function() {
@@ -304,7 +305,7 @@ contract("VendorContract", function(accounts) {
             vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
             const tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
-            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, vulnerabilityHash, hashlock, {from: authorityAddress});
+            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, hashlock, {from: authorityAddress});
             await web3.eth.sendTransaction({
                 from: vendorAddress,
                 to: vendor.address,
@@ -440,7 +441,7 @@ contract("VendorContract", function(accounts) {
             vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
             const tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
-            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, vulnerabilityHash, hashlock, {from: authorityAddress});
+            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, hashlock, {from: authorityAddress});
             await web3.eth.sendTransaction({
                 from: vendorAddress,
                 to: vendor.address,
@@ -517,7 +518,7 @@ contract("VendorContract", function(accounts) {
             vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
             const tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
-            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, vulnerabilityHash, hashlock, {from: authorityAddress});
+            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, hashlock, {from: authorityAddress});
             await web3.eth.sendTransaction({
                 from: vendorAddress,
                 to: vendor.address,
@@ -561,7 +562,7 @@ contract("VendorContract", function(accounts) {
             vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
             const tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
-            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, vulnerabilityHash, hashlock, {from: authorityAddress});
+            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, hashlock, {from: authorityAddress});
             await web3.eth.sendTransaction({
                 from: vendorAddress,
                 to: vendor.address,
