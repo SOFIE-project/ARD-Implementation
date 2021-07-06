@@ -50,7 +50,6 @@ contract VendorContract is Ownable {
     struct Metadata {
         uint32 timestamp;           // The timestamp of the creation of the vulnerability
         bytes32 productId;          // The Id of the product (name and version)
-        // bytes32 vulnerabilityHash;  // The hash of the vulnerability information
     }
 
     // Vulnerability data structure 
@@ -69,7 +68,7 @@ contract VendorContract is Ownable {
 
     // States of a vulnerability
     enum State {Pending, Invalid, Valid, Duplicate, Acknowledged, Disclosable, Disclosed}
-    // States of the reward associated to a vulnerability
+    // States of the reward associated with a vulnerability
     enum RewardState {NULL, SET, CANCELED, SENT}
 
 
@@ -127,8 +126,8 @@ contract VendorContract is Ownable {
 
 
     /**
-        @notice The function is called by the Authority to set up a new vulnerability record
-        @param _vulnerabilityHash The vulnerability identifier, bytes32
+        @notice The function is called by the Authority to store a new vulnerability record
+        @param _vulnerabilityHash The vulnerability hash, which will be used as identifier (key), bytes32
         @param _expert The Expert address
         @param _productId The id of the product, bytes32
         @param _hashlock The hashlock, bytes32
@@ -138,7 +137,6 @@ contract VendorContract is Ownable {
         bytes32 _vulnerabilityHash,
         address payable _expert,
         bytes32 _productId,
-        // bytes32 _vulnerabilityHash,
         bytes32 _hashlock
         ) external onlyAuhtority {
 
@@ -149,7 +147,6 @@ contract VendorContract is Ownable {
         Metadata memory metadata = Metadata({
                                         timestamp: uint32(block.timestamp),
                                         productId: _productId
-                                        //, vulnerabilityHash: _vulnerabilityHash
                                     });
 
         // Create new vulnerability entry
@@ -422,12 +419,10 @@ contract VendorContract is Ownable {
     function getVulnerabilityMetadata (bytes32 _vulnerabilityId) external view returns(
         uint32 timestamp,
         bytes32 productId
-        //, bytes32 vulnerabilityHash
         ) {
 
         Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
         return(v.metadata.timestamp, v.metadata.productId);
-        // , v.metadata.vulnerabilityHash);
     }
 
     /**

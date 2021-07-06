@@ -16,7 +16,6 @@ contract("VendorContract", function(accounts) {
         Valid: 2,
         Duplicate: 3,
         Acknowledged: 4,
-        // Patched: 5,
         Disclosable: 5,
         Disclosed: 6
     }
@@ -39,7 +38,6 @@ contract("VendorContract", function(accounts) {
     const vulnerabilityData = "Vulnerability detailed description in text format";
     const vulnerabilityHash = web3.utils.soliditySha3({type: 'string', value: vulnerabilityData});
     const vulnerabilityLocation = "https://organization.org/report_1_test";
-    // const vulnerabilityId = web3.utils.soliditySha3({type: 'string', value: vulnerabilityLocation}); // An example of bytes32 for the vulnerabilityId
     const vulnerabilityId = vulnerabilityHash;
 
 
@@ -127,7 +125,7 @@ contract("VendorContract", function(accounts) {
 
         it("Should NOT unregister a non-registered product", async function() {
 
-            // Use any other bytes32 data
+            // Use any other bytes32 data for the test, vulnerabilityHash in this case
             await truffleAssert.fails(
                 vendor.unregisterProduct(vulnerabilityHash, {from: vendorAddress}),
                 truffleAssert.ErrorType.REVERT,
@@ -384,52 +382,6 @@ contract("VendorContract", function(accounts) {
         });
 
     });   
-
-
-    // describe("patch()", function() {
-
-    //     let vendor;
-    //     let productId;
-
-    //     beforeEach(async function() {
-
-    //         const timelock = Math.round(new Date() / 1000) + 100000;
-    //         const ackTimelock = Math.round(new Date() / 1000) + 10000;
-
-    //         vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
-    //         const tx = await vendor.registerProduct(productName, {from: vendorAddress});
-    //         productId = tx["logs"][0].args.productId;
-    //         await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, vulnerabilityHash, hashlock, {from: authorityAddress});
-    //         await web3.eth.sendTransaction({
-    //             from: vendorAddress,
-    //             to: vendor.address,
-    //             value: funds
-    //         });
-
-    //         await vendor.setState(vulnerabilityId, STATUS.Valid, {from: authorityAddress});
-    //         await vendor.setTimelock(vulnerabilityId, ackTimelock, timelock, {from: authorityAddress});
-    //     });
-
-    //     it("Should patch the vulnerability", async function() {
-
-    //         await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
-
-    //         await vendor.patch(vulnerabilityId, {from: vendorAddress});
-
-    //         const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
-    //         assert.equal(info[1], STATUS.Patched, "The state should be " + STATUS.PAtched + " (Patched)");
-    //     });
-
-    //     it("Should NOT patch the vulnerability: not acknowledged", async function() {
-
-    //         await truffleAssert.fails(
-    //             vendor.patch(vulnerabilityId, {from: vendorAddress}),
-    //             truffleAssert.ErrorType.REVERT,
-    //             "The vulnerability has not been acknowledged" // String of the revert
-    //         );
-    //     });
-    // });  
-
     
     describe("withdraw()", function() {
 
@@ -596,31 +548,31 @@ contract("VendorContract", function(accounts) {
     }); 
 
 
-    describe("method name", function() {
+    // describe("method name", function() {
 
-        beforeEach(async function() {
+    //     beforeEach(async function() {
 
-            // Execute before each it() statement, common initialization
-        });
+    //         // Execute before each it() statement, common initialization
+    //     });
 
-        it("Should repsect this condition ....", async function() {
+    //     it("Should repsect this condition ....", async function() {
 
-            // Write code to end up in a known ok state (tested before)
+    //         // Write code to end up in a known ok state (tested before)
             
-            // Write command to test
+    //         // Write command to test
 
-            // Assert the state of the contract and check it is the expected one
-        });
+    //         // Assert the state of the contract and check it is the expected one
+    //     });
 
-        it("Should NOT respect this condition ....", async function() {
+    //     it("Should NOT respect this condition ....", async function() {
 
-            // Write code to end up in a known ok state (tested before)
+    //         // Write code to end up in a known ok state (tested before)
             
-            // Write command to test
+    //         // Write command to test
 
-            // Assert the state of the contract and check it is the expected one
-        });
-    });     
+    //         // Assert the state of the contract and check it is the expected one
+    //     });
+    // });     
 
     
 });

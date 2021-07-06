@@ -31,10 +31,6 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
     // Map a vulnerabilityId to the related vendor
     mapping(bytes32 => address) public VendorVulnerabilities; 
 
-    // Vulnerability ID incremental counter
-    // uint ID;
-
-
     /**
         Structs and Enums
      */
@@ -64,7 +60,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         Events
      */
 
-    event LogVulnerabilityNew(bytes32 indexed vulnerabilityHash, address indexed expert, address indexed vendor, bytes32 hashlock);
+    event LogVulnerabilityNew(bytes32 indexed vulnerabilityId, address indexed expert, address indexed vendor, bytes32 hashlock);
     event LogVulnerabilityApproval(bytes32 indexed vulnerabilityId, uint32 ackTimelock, uint32 timelock, VendorContract.State state);
     event LogVulnerabilityDisclose(bytes32 indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation);
     event LogVulnerabilityPatched(bytes32 indexed vulnerabilityId, bool patched, bool timelock_expired);
@@ -200,7 +196,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         @param _hashlock The hashlock, bytes32
         @param _productId The id of the product, bytes32
         @param _vulnerabilityHash The hash of the vulnerability data, bytes32
-        @return _vulnerabilityId Id of the new contract. This is needed for subsequent calls
+        @return _vulnerabilityId The Id of the vulnerability created, which is equal to its input hash
         @dev If positive, emits LogVulnerabilityNew(bytes32 indexed vulnerabilityHash, address indexed researcher, address indexed vendor, bytes32 hashlock)
         @dev Reverts if the generated vulnerability id already exists
     */  
@@ -342,8 +338,6 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         @dev Emits LogVulnerabilityDisclose(uint indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation)
      */
     function _disclose(bytes32 id, string memory location) private vulnerabilityExists(id) {
-
-        // require(haveVulnerability(id), "vulnerabilityId does not exist");
 
         // Retrive VendorContract
         address _vendor = VendorVulnerabilities[id];

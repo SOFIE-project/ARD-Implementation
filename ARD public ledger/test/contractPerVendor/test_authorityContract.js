@@ -16,7 +16,6 @@ contract("AuthorityContract", function(accounts) {
         Valid: 2,
         Duplicate: 3,
         Acknowledged: 4,
-        // Patched: 5,
         Disclosable: 5,
         Disclosed: 6
     }
@@ -178,28 +177,17 @@ contract("AuthorityContract", function(accounts) {
             console.log("Register vulnerability " + tx.receipt.gasUsed);
             
             let event = tx["logs"][0].args;
-            let v = await authority.VendorVulnerabilities(event.vulnerabilityHash);
-            let info = await vendor.getVulnerabilityInfo(event.vulnerabilityHash);
+            let v = await authority.VendorVulnerabilities(event.vulnerabilityId);
+            let info = await vendor.getVulnerabilityInfo(event.vulnerabilityId);
 
-            assert.equal(v, vendorAddress, "The id "+event.vulnerabilityHash+" should be mapped to " + vendorAddress)
+            // Recall vulnerabilityId == vulnerabilityHash
+            assert.equal(v, vendorAddress, "The id "+event.vulnerabilityId+" should be mapped to " + vendorAddress)
             assert.equal(event.expert, expertAddress, "The sender should be the expert: " + expertAddress);
             assert.equal(event.vendor, vendorAddress, "The target vendor should be " + vendorAddress);
             assert.equal(event.hashlock, hashlock, "The used hashlock should be " + hashlock);
-            assert.equal(event.vulnerabilityHash, vulnerabilityHash, "The hash of the vulnerability description should be" + vulnerabilityHash);
+            assert.equal(event.vulnerabilityId, vulnerabilityId, "The hash of the vulnerability description should be" + vulnerabilityId);
             assert.equal(info[0], expertAddress, "The vendor contract should store the vulnerability, and have expert field as" + expertAddress);
-        });
-    
-        // it("Should NOT register a vulnerability already sent (producing the same Id)", async function() {
-    
-        //     await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
-
-        //     await truffleAssert.fails(
-        //         authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress}),
-        //         truffleAssert.ErrorType.REVERT,
-        //         "Vulnerability already exists" // String of the revert
-        //     );
-        // });
-    
+        });   
     });
 
 
@@ -209,7 +197,6 @@ contract("AuthorityContract", function(accounts) {
         let authority;
         let vendor;
         let productId;
-        // let vulnerabilityId;
 
         // Solidity block.timestamp is *in seconds*. Need to round them down to integer
         // const timelock = Math.round(new Date() / 1000) + 100000;
@@ -224,7 +211,6 @@ contract("AuthorityContract", function(accounts) {
             tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
             tx = await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
-            // vulnerabilityId = tx["logs"][0].args.vulnerabilityId;
         });
 
         it("Should approve a vulnerability", async function() {
@@ -232,15 +218,12 @@ contract("AuthorityContract", function(accounts) {
             let code = 1; // Approve code
             const motivation = "Vulnerability approved";
             const data = web3.eth.abi.encodeParameters(['bytes32', 'uint', 'string'], [vulnerabilityId, code, "0x0"]);
-            // let tx = await authority.approve(vulnerabilityId, ackTimelock, timelock, DECISION.Approved, motivation, {from: authorityAddress});
             let tx = await authority.interledgerReceive(vulnerabilityId, data, {from: interledgerAddress});
             console.log("Interledger receive: approve " + tx.receipt.gasUsed);
 
             truffleAssert.eventEmitted(tx, 'LogVulnerabilityApproval', (ev) => {                
                 return (
                         ev.vulnerabilityId == vulnerabilityId,
-                        // ev.timelock == timelock,
-                        // ev.actTimelock == ackTimelock,
                         ev.state == STATUS.Valid
                         );
             }, 'LogVulnerabilityApproval event did not fire with correct parameters');
@@ -249,7 +232,6 @@ contract("AuthorityContract", function(accounts) {
         it("Should not approve a vulnerability: invalid", async function() {
 
             const motivation = "Not relevant imporntance";
-            // let tx = await authority.approve(vulnerabilityId, ackTimelock, timelock, DECISION.Invalid, motivation, {from: authorityAddress});
             let tx = await authority.reject(vulnerabilityId, true, {from: authorityAddress});
 
             truffleAssert.eventEmitted(tx, 'LogVulnerabilityApproval', (ev) => {                
@@ -265,7 +247,6 @@ contract("AuthorityContract", function(accounts) {
         it("Should not approve a vulnerability: duplicate", async function() {
 
             const motivation = "Already submitted";
-            // let tx = await authority.approve(vulnerabilityId, ackTimelock, timelock, DECISION.Duplicate, motivation, {from: authorityAddress});
             let tx = await authority.reject(vulnerabilityId, false, {from: authorityAddress});
 
             truffleAssert.eventEmitted(tx, 'LogVulnerabilityApproval', (ev) => {                
@@ -286,7 +267,6 @@ contract("AuthorityContract", function(accounts) {
         let authority;
         let vendor;
         let productId;
-        // let vulnerabilityId;
         
         beforeEach(async function() {
 
@@ -298,8 +278,6 @@ contract("AuthorityContract", function(accounts) {
             tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
             tx = await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
-            // vulnerabilityId = tx["logs"][0].args.vulnerabilityId;
-            // await authority.approve(vulnerabilityId, ackTimelock, timelock, DECISION.Approved, "Vulnerability approved", {from: authorityAddress});
             const code = 1;
             const data = web3.eth.abi.encodeParameters(['bytes32', 'uint', 'string'], [vulnerabilityId, code, "null"]);
             await authority.interledgerReceive(vulnerabilityId, data, {from: interledgerAddress});
@@ -473,7 +451,6 @@ contract("AuthorityContract", function(accounts) {
         let authority;
         let vendor;
         let productId;
-        // let vulnerabilityId;
 
         // Solidity block.timestamp is *in seconds*. Need to round them down to integer
         const timelock = Math.round(new Date() / 1000) + 100000;
@@ -498,7 +475,6 @@ contract("AuthorityContract", function(accounts) {
                 value: funds
             });            
             await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
-            // await vendor.patch(vulnerabilityId, {from: vendorAddress});
         });
 
         it("Should fully disclose the vulnerability", async function() {
@@ -564,7 +540,6 @@ contract("AuthorityContract", function(accounts) {
         let authority;
         let vendor;
         let productId;
-        // let vulnerabilityId;
         
         beforeEach(async function() {
             factory = await Factory.new({from: authorityAddress});
@@ -575,7 +550,6 @@ contract("AuthorityContract", function(accounts) {
             tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
             tx = await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
-            // vulnerabilityId = tx["logs"][0].args.vulnerabilityId;
             const code = 1; // Approve
             const data = web3.eth.abi.encodeParameters(['bytes32', 'uint', 'string'], [vulnerabilityId, code, "null"]);
             await authority.interledgerReceive(vulnerabilityId, data, {from: interledgerAddress});
