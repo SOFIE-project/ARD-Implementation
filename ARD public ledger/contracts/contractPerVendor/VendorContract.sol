@@ -1,6 +1,5 @@
 pragma solidity ^0.6.0;
 
-//import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 
@@ -96,9 +95,9 @@ contract VendorContract is Ownable {
         _;
     }
 
-    modifier isValid(bytes32 _vulnerabilityId) {
+    modifier isValid(bytes32 _vulnerabilityHash) {
         // Check whether a contract is Valid, i.e. it has been approved
-        require(Vulnerabilities[_vulnerabilityId].state == State.Valid, "State is not Valid");
+        require(Vulnerabilities[_vulnerabilityHash].state == State.Valid, "State is not Valid");
         _;
     }
 
@@ -166,37 +165,37 @@ contract VendorContract is Ownable {
 
     /**
         @notice Set the state of the vulnerability in the ARD process
-        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
         @param _state The state to set
         @dev Only the authority
     */
-    function setState(bytes32 _vulnerabilityId, State _state) external onlyAuhtority {
+    function setState(bytes32 _vulnerabilityHash, State _state) external onlyAuhtority {
 
-        Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
+        Vulnerability storage v = Vulnerabilities[_vulnerabilityHash];
         v.state = _state;
     }
 
     /**
         @notice Set the state of the reward
-        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
         @param _rewState The state to set
         @dev Only the authority
     */
-    function setRewardState(bytes32 _vulnerabilityId, RewardState _rewState) external onlyAuhtority {
+    function setRewardState(bytes32 _vulnerabilityHash, RewardState _rewState) external onlyAuhtority {
 
-        Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
+        Vulnerability storage v = Vulnerabilities[_vulnerabilityHash];
         v.reward.state = _rewState;
     }
 
     /**
         @notice Set the timelock
-        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
         @param _timelock The new timelock in UNIX epoch time
         @dev Only the authority
     */
-    function setTimelock(bytes32 _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock) external onlyAuhtority {
+    function setTimelock(bytes32 _vulnerabilityHash, uint32 _ackTimelock, uint32 _timelock) external onlyAuhtority {
 
-        Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
+        Vulnerability storage v = Vulnerabilities[_vulnerabilityHash];
 
         require(v.timelock == 0, "Timelock already set");
         v.ackTimelock = _ackTimelock;
@@ -205,13 +204,13 @@ contract VendorContract is Ownable {
 
     /**
         @notice Set the secret
-        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
         @param _secret The hashlock preimage, uint
         @dev Only the authority
     */
-    function setSecret(bytes32 _vulnerabilityId,uint _secret) external onlyAuhtority {
+    function setSecret(bytes32 _vulnerabilityHash,uint _secret) external onlyAuhtority {
 
-        Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
+        Vulnerability storage v = Vulnerabilities[_vulnerabilityHash];
 
         require(v.secret == 0, "Secret already set");
         v.secret = _secret;
@@ -219,26 +218,26 @@ contract VendorContract is Ownable {
 
     /**
         @notice Set the location of the vulnerability information
-        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
         @param _location The location to disclose the vulnerability, string
         @dev Only the authority
     */
-    function setLocation(bytes32 _vulnerabilityId,string calldata _location) external onlyAuhtority {
+    function setLocation(bytes32 _vulnerabilityHash,string calldata _location) external onlyAuhtority {
 
-        Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
+        Vulnerability storage v = Vulnerabilities[_vulnerabilityHash];
         v.vulnerabilityLocation = _location;
     }
 
     /**
         @notice Cancel the bounty assigned to a vulnerability
-        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
         @param _reason The reason why vulnerability has been deleted, string
         @dev Emits LogBountyCanceled(bytes32 indexed vulnerabilityId, string reason)
         @dev Only the authority
     */
-    function cancelBounty(bytes32 _vulnerabilityId, string calldata _reason) external onlyAuhtority {
+    function cancelBounty(bytes32 _vulnerabilityHash, string calldata _reason) external onlyAuhtority {
 
-        Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
+        Vulnerability storage v = Vulnerabilities[_vulnerabilityHash];
 
         require(v.reward.state == RewardState.SET, "A bounty has to be SET to be canceled");
 
@@ -247,17 +246,17 @@ contract VendorContract is Ownable {
         v.reward.amount = 0;
         balanceOwner += amount;
 
-        emit LogBountyCanceled(_vulnerabilityId, _reason);
+        emit LogBountyCanceled(_vulnerabilityHash, _reason);
     }
 
     /**
         @notice Pay the bounty to the researcher of a vulnerability
-        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
         @dev Only the authority
     */
-     function payBounty(bytes32 _vulnerabilityId) external onlyAuhtority {
+     function payBounty(bytes32 _vulnerabilityHash) external onlyAuhtority {
         // Checks done by the Authority.withdrawBounty function
-        Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
+        Vulnerability storage v = Vulnerabilities[_vulnerabilityHash];
 
         uint amount = v.reward.amount;
         address payable _expert = v.expert;
@@ -322,17 +321,17 @@ contract VendorContract is Ownable {
 
     /**
         @notice Acknowledge the vulnerability and set a bounty as a reward
-        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
         @param _bounty The reward to the Researcher
         @dev Emits LogVulnerabilityAcknowledgment(uint indexed vulnerabilityId, address indexed vendor, uint bounty)
-        @dev Only the owner, _vulnerabilityId exists and it is valid, and the contract has sufficient funds for the bounty
+        @dev Only the owner, _vulnerabilityHash exists and it is valid, and the contract has sufficient funds for the bounty
     */
-    function acknowledge(bytes32 _vulnerabilityId, uint _bounty)
+    function acknowledge(bytes32 _vulnerabilityHash, uint _bounty)
         public
-        isValid(_vulnerabilityId)
+        isValid(_vulnerabilityHash)
         onlyOwner {
 
-        Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
+        Vulnerability storage v = Vulnerabilities[_vulnerabilityHash];
         require(v.expert != address(0x0), "Vulnerability with input ID is not registered");
 
         require(uint32(block.timestamp) < v.ackTimelock, "The ack timelock has expired");
@@ -344,7 +343,7 @@ contract VendorContract is Ownable {
         v.reward.amount = _bounty;
         balanceOwner -= _bounty;
 
-        emit LogVulnerabilityAcknowledgment(_vulnerabilityId, msg.sender, _bounty);
+        emit LogVulnerabilityAcknowledgment(_vulnerabilityHash, msg.sender, _bounty);
     }
 
 
@@ -385,7 +384,7 @@ contract VendorContract is Ownable {
 
     /**
         @notice Get the information of a vulnerability
-        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
         @return The researcher address, 
         @return The state of the vulnerability in the process, uint8
         @return The hashlock, bytes32
@@ -395,7 +394,7 @@ contract VendorContract is Ownable {
         @return The vulnerability location, string
         @dev The reason the get function has been split is due to StackTooDeep Exception
     */
-    function getVulnerabilityInfo(bytes32 _vulnerabilityId) external view returns(
+    function getVulnerabilityInfo(bytes32 _vulnerabilityHash) external view returns(
         address ,
         State ,
         bytes32 ,
@@ -405,36 +404,36 @@ contract VendorContract is Ownable {
         string memory
         ) {
 
-        Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
+        Vulnerability memory v = Vulnerabilities[_vulnerabilityHash];
         return(address(v.expert), v.state, v.hashlock, v.timelock, v.ackTimelock, v.secret, v.vulnerabilityLocation);
     }
 
     /**
         @notice Get the metadata of a vulnerability
-        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
         @return timestamp The creation timestamp, uint32 
         @return productId The id of the product involved, uint32
         @dev The reason the get function has been split is due to StackTooDeep Exception
     */
-    function getVulnerabilityMetadata (bytes32 _vulnerabilityId) external view returns(
+    function getVulnerabilityMetadata (bytes32 _vulnerabilityHash) external view returns(
         uint32 timestamp,
         bytes32 productId
         ) {
 
-        Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
+        Vulnerability memory v = Vulnerabilities[_vulnerabilityHash];
         return(v.metadata.timestamp, v.metadata.productId);
     }
 
     /**
         @notice Get the reward data of a vulnerability
-        @param _vulnerabilityId The vulnerability identifier, bytes32
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
         @return _state The reward state,uint8
         @return _amount The reward amount, uint
         @dev The reason the get function has been split is due to StackTooDeep Exception
     */
-    function getVulnerabilityReward (bytes32 _vulnerabilityId) external view returns(RewardState _state, uint _amount){
+    function getVulnerabilityReward (bytes32 _vulnerabilityHash) external view returns(RewardState _state, uint _amount){
 
-        Vulnerability memory v = Vulnerabilities[_vulnerabilityId];
+        Vulnerability memory v = Vulnerabilities[_vulnerabilityHash];
         return(v.reward.state,v.reward.amount);
     }
 
@@ -446,13 +445,4 @@ contract VendorContract is Ownable {
         balanceOwner += msg.value;
     }
 
-
-    // Debug functions (to remove)
-   function debug_setTimelock(bytes32 _vulnerabilityId, uint32 _ackTimelock, uint32 _timelock) external {
-
-        Vulnerability storage v = Vulnerabilities[_vulnerabilityId];
-
-        v.ackTimelock = _ackTimelock;
-        v.timelock = _timelock;
-    }    
 }

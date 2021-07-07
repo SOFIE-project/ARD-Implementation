@@ -38,7 +38,6 @@ contract("VendorContract", function(accounts) {
     const vulnerabilityData = "Vulnerability detailed description in text format";
     const vulnerabilityHash = web3.utils.soliditySha3({type: 'string', value: vulnerabilityData});
     const vulnerabilityLocation = "https://organization.org/report_1_test";
-    const vulnerabilityId = vulnerabilityHash;
 
 
     describe("Constructor()", function() {
@@ -149,11 +148,11 @@ contract("VendorContract", function(accounts) {
 
         it("Should store a new vulnerability record", async function() {
 
-            const tx = await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, hashlock, {from: authorityAddress});
+            const tx = await vendor.newVulnerability(vulnerabilityHash, expertAddress, productId, hashlock, {from: authorityAddress});
 
-            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
-            const metadata = await vendor.getVulnerabilityMetadata(vulnerabilityId);
-            const reward = await vendor.getVulnerabilityReward(vulnerabilityId);
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityHash);
+            const metadata = await vendor.getVulnerabilityMetadata(vulnerabilityHash);
+            const reward = await vendor.getVulnerabilityReward(vulnerabilityHash);
             
             const block_n = tx.receipt.blockNumber;
             const block = await web3.eth.getBlock(block_n);
@@ -176,7 +175,7 @@ contract("VendorContract", function(accounts) {
         it("Should NOT store a new vulnerability record: product does not exist", async function() {
 
             await truffleAssert.fails(
-                vendor.newVulnerability(vulnerabilityId, expertAddress, hashlock, // wrong product id 
+                vendor.newVulnerability(vulnerabilityHash, expertAddress, hashlock, // wrong product id 
                     hashlock, {from: authorityAddress}),
                 truffleAssert.ErrorType.REVERT,
                 "Product with input ID is not registered" // String of the revert
@@ -186,7 +185,7 @@ contract("VendorContract", function(accounts) {
         it("Should NOT store a new vulnerability record: wrong caller", async function() {
 
             await truffleAssert.fails(
-                vendor.newVulnerability(vulnerabilityId, expertAddress, productId, hashlock, {from: expertAddress}),
+                vendor.newVulnerability(vulnerabilityHash, expertAddress, productId, hashlock, {from: expertAddress}),
                 truffleAssert.ErrorType.REVERT,
                 "The caller is not the authority" // String of the revert
             );
@@ -204,24 +203,24 @@ contract("VendorContract", function(accounts) {
             vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
             const tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
-            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, hashlock, {from: authorityAddress});
+            await vendor.newVulnerability(vulnerabilityHash, expertAddress, productId, hashlock, {from: authorityAddress});
         });
 
         it("setState()", async function() {
 
             // Any state
-            const tx = await vendor.setState(vulnerabilityId, STATUS.Acknowledged, {from: authorityAddress});
+            const tx = await vendor.setState(vulnerabilityHash, STATUS.Acknowledged, {from: authorityAddress});
 
-            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityHash);
             assert.equal(info[1], STATUS.Acknowledged, "The status should be " + STATUS.Acknowledged + " (Acknowledged)");
         });
 
         it("setRewardState()", async function() {
 
             // Any state
-            await vendor.setRewardState(vulnerabilityId, REWARDSTATE.SENT, {from: authorityAddress});
+            await vendor.setRewardState(vulnerabilityHash, REWARDSTATE.SENT, {from: authorityAddress});
 
-            const reward = await vendor.getVulnerabilityReward(vulnerabilityId);
+            const reward = await vendor.getVulnerabilityReward(vulnerabilityHash);
             assert.equal(reward[0], REWARDSTATE.SENT, "The reward state should be " + REWARDSTATE.SENT + " (SENT)");
         });
 
@@ -231,26 +230,26 @@ contract("VendorContract", function(accounts) {
             const timelock = Math.round(new Date() / 1000) + 100000;
             const ackTimelock = Math.round(new Date() / 1000) + 1000;
 
-            await vendor.setTimelock(vulnerabilityId, ackTimelock, timelock, {from: authorityAddress});
+            await vendor.setTimelock(vulnerabilityHash, ackTimelock, timelock, {from: authorityAddress});
 
-            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityHash);
             assert.equal(info[3].toString(), ""+timelock, "The timelock should be " + timelock);
             assert.equal(info[4].toString(), ""+ ackTimelock, "The ack timelock should be " + ackTimelock);
         });
 
         it("setSecret()", async function() {
 
-            await vendor.setSecret(vulnerabilityId, secret, {from: authorityAddress});
+            await vendor.setSecret(vulnerabilityHash, secret, {from: authorityAddress});
 
-            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityHash);
             assert.equal(info[5], secret, "The secret should be " + secret);
         });
 
         it("setLocation()", async function() {
 
-            await vendor.setLocation(vulnerabilityId, vulnerabilityLocation, {from: authorityAddress});
+            await vendor.setLocation(vulnerabilityHash, vulnerabilityLocation, {from: authorityAddress});
 
-            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityHash);
             assert.equal(info[6], vulnerabilityLocation, "The vulnerability location should be " + vulnerabilityLocation);
         });
     });
@@ -303,7 +302,7 @@ contract("VendorContract", function(accounts) {
             vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
             const tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
-            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, hashlock, {from: authorityAddress});
+            await vendor.newVulnerability(vulnerabilityHash, expertAddress, productId, hashlock, {from: authorityAddress});
             await web3.eth.sendTransaction({
                 from: vendorAddress,
                 to: vendor.address,
@@ -317,14 +316,14 @@ contract("VendorContract", function(accounts) {
             const ackTimelock = Math.round(new Date() / 1000) + 10000;
 
             // Set the state in a valid state for the function
-            await vendor.setState(vulnerabilityId, STATUS.Valid, {from: authorityAddress});
-            await vendor.setTimelock(vulnerabilityId, ackTimelock, timelock, {from: authorityAddress});
+            await vendor.setState(vulnerabilityHash, STATUS.Valid, {from: authorityAddress});
+            await vendor.setTimelock(vulnerabilityHash, ackTimelock, timelock, {from: authorityAddress});
 
-            tx = await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+            tx = await vendor.acknowledge(vulnerabilityHash, bounty, {from: vendorAddress});
             console.log("Acknwoledge " + tx.receipt.gasUsed);
 
-            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
-            const reward = await vendor.getVulnerabilityReward(vulnerabilityId);
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityHash);
+            const reward = await vendor.getVulnerabilityReward(vulnerabilityHash);
             const balanceOwner = await vendor.balanceOwner();
 
             assert.equal(info[1], STATUS.Acknowledged, "The state should be " + STATUS.Acknowledged + " (Acknowledged)");
@@ -339,11 +338,11 @@ contract("VendorContract", function(accounts) {
             const ackTimelock = Math.round(new Date() / 1000) - 10000;
 
             // Set the state in a valid state for the function
-            await vendor.setState(vulnerabilityId, STATUS.Valid, {from: authorityAddress});
-            await vendor.setTimelock(vulnerabilityId, ackTimelock, timelock, {from: authorityAddress});
+            await vendor.setState(vulnerabilityHash, STATUS.Valid, {from: authorityAddress});
+            await vendor.setTimelock(vulnerabilityHash, ackTimelock, timelock, {from: authorityAddress});
 
             await truffleAssert.fails(
-                vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress}),
+                vendor.acknowledge(vulnerabilityHash, bounty, {from: vendorAddress}),
                 truffleAssert.ErrorType.REVERT,
                 "The ack timelock has expired" // String of the revert
             );
@@ -355,11 +354,11 @@ contract("VendorContract", function(accounts) {
             const ackTimelock = Math.round(new Date() / 1000) + 10000;
 
             // Set the state in a valid state for the function
-            await vendor.setState(vulnerabilityId, STATUS.Invalid, {from: authorityAddress});
-            await vendor.setTimelock(vulnerabilityId, ackTimelock, timelock, {from: authorityAddress});
+            await vendor.setState(vulnerabilityHash, STATUS.Invalid, {from: authorityAddress});
+            await vendor.setTimelock(vulnerabilityHash, ackTimelock, timelock, {from: authorityAddress});
 
             await truffleAssert.fails(
-                vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress}),
+                vendor.acknowledge(vulnerabilityHash, bounty, {from: vendorAddress}),
                 truffleAssert.ErrorType.REVERT,
                 "State is not Valid" // String of the revert
             );
@@ -371,11 +370,11 @@ contract("VendorContract", function(accounts) {
             const ackTimelock = Math.round(new Date() / 1000) + 10000;
 
             // Set the state in a valid state for the function
-            await vendor.setState(vulnerabilityId, STATUS.Valid, {from: authorityAddress});
-            await vendor.setTimelock(vulnerabilityId, ackTimelock, timelock, {from: authorityAddress});
+            await vendor.setState(vulnerabilityHash, STATUS.Valid, {from: authorityAddress});
+            await vendor.setTimelock(vulnerabilityHash, ackTimelock, timelock, {from: authorityAddress});
 
             await truffleAssert.fails(
-                vendor.acknowledge(vulnerabilityId, bounty + web3.utils.toWei('10', 'ether'), {from: vendorAddress}),
+                vendor.acknowledge(vulnerabilityHash, bounty + web3.utils.toWei('10', 'ether'), {from: vendorAddress}),
                 truffleAssert.ErrorType.REVERT,
                 "Available balance not enough to fund the bounty" // String of the revert
             );
@@ -393,7 +392,7 @@ contract("VendorContract", function(accounts) {
             vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
             const tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
-            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, hashlock, {from: authorityAddress});
+            await vendor.newVulnerability(vulnerabilityHash, expertAddress, productId, hashlock, {from: authorityAddress});
             await web3.eth.sendTransaction({
                 from: vendorAddress,
                 to: vendor.address,
@@ -422,9 +421,9 @@ contract("VendorContract", function(accounts) {
             const timelock = Math.round(new Date() / 1000) + 100000;
             const ackTimelock = Math.round(new Date() / 1000) + 10000;
 
-            await vendor.setState(vulnerabilityId, STATUS.Valid, {from: authorityAddress});
-            await vendor.setTimelock(vulnerabilityId, ackTimelock, timelock, {from: authorityAddress});
-            await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+            await vendor.setState(vulnerabilityHash, STATUS.Valid, {from: authorityAddress});
+            await vendor.setTimelock(vulnerabilityHash, ackTimelock, timelock, {from: authorityAddress});
+            await vendor.acknowledge(vulnerabilityHash, bounty, {from: vendorAddress});
 
             await vendor.withdraw(bounty, {from: vendorAddress}); // 1 ETH
 
@@ -443,9 +442,9 @@ contract("VendorContract", function(accounts) {
             const timelock = Math.round(new Date() / 1000) + 100000;
             const ackTimelock = Math.round(new Date() / 1000) + 10000;
 
-            await vendor.setState(vulnerabilityId, STATUS.Valid, {from: authorityAddress});
-            await vendor.setTimelock(vulnerabilityId, ackTimelock, timelock, {from: authorityAddress});
-            await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+            await vendor.setState(vulnerabilityHash, STATUS.Valid, {from: authorityAddress});
+            await vendor.setTimelock(vulnerabilityHash, ackTimelock, timelock, {from: authorityAddress});
+            await vendor.acknowledge(vulnerabilityHash, bounty, {from: vendorAddress});
 
             // Withdraw 5 ETH (4 ETH available)
             await truffleAssert.fails(
@@ -470,29 +469,29 @@ contract("VendorContract", function(accounts) {
             vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
             const tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
-            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, hashlock, {from: authorityAddress});
+            await vendor.newVulnerability(vulnerabilityHash, expertAddress, productId, hashlock, {from: authorityAddress});
             await web3.eth.sendTransaction({
                 from: vendorAddress,
                 to: vendor.address,
                 value: funds
             });
 
-            await vendor.setState(vulnerabilityId, STATUS.Valid, {from: authorityAddress});
-            await vendor.setTimelock(vulnerabilityId, ackTimelock, timelock, {from: authorityAddress});
+            await vendor.setState(vulnerabilityHash, STATUS.Valid, {from: authorityAddress});
+            await vendor.setTimelock(vulnerabilityHash, ackTimelock, timelock, {from: authorityAddress});
 
         });
 
         it("Should pay the bounty to the expert", async function() {
 
             // Bounty: 1 ETH
-            await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+            await vendor.acknowledge(vulnerabilityHash, bounty, {from: vendorAddress});
 
             // The contract is funded with 5 ETH
-            await vendor.payBounty(vulnerabilityId, {from:authorityAddress});
+            await vendor.payBounty(vulnerabilityHash, {from:authorityAddress});
 
             const balance = await web3.eth.getBalance(vendor.address);
             const balanceOwner = await vendor.balanceOwner();
-            const reward = await vendor.getVulnerabilityReward(vulnerabilityId);
+            const reward = await vendor.getVulnerabilityReward(vulnerabilityHash);
 
             assert.equal(balance, (funds - bounty), "The contract should have " + (funds - bounty) +  " wei in its balance");
             assert.equal(balanceOwner, (funds - bounty), "The balance owner should be " + (funds - bounty) +  " wei (equal to balance)");
@@ -514,15 +513,15 @@ contract("VendorContract", function(accounts) {
             vendor = await Vendor.new(vendorAddress, authorityAddress, {from: vendorAddress});
             const tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
-            await vendor.newVulnerability(vulnerabilityId, expertAddress, productId, hashlock, {from: authorityAddress});
+            await vendor.newVulnerability(vulnerabilityHash, expertAddress, productId, hashlock, {from: authorityAddress});
             await web3.eth.sendTransaction({
                 from: vendorAddress,
                 to: vendor.address,
                 value: funds
             });
 
-            await vendor.setState(vulnerabilityId, STATUS.Valid, {from: authorityAddress});
-            await vendor.setTimelock(vulnerabilityId, ackTimelock, timelock, {from: authorityAddress});
+            await vendor.setState(vulnerabilityHash, STATUS.Valid, {from: authorityAddress});
+            await vendor.setTimelock(vulnerabilityHash, ackTimelock, timelock, {from: authorityAddress});
 
         });
 
@@ -531,14 +530,14 @@ contract("VendorContract", function(accounts) {
             const motivation = "The expert disclosed the vulnerability in www.site.com";
 
             // Bounty: 1 ETH
-            await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+            await vendor.acknowledge(vulnerabilityHash, bounty, {from: vendorAddress});
 
             // The contract is funded with 5 ETH
-            await vendor.cancelBounty(vulnerabilityId, motivation, {from:authorityAddress});
+            await vendor.cancelBounty(vulnerabilityHash, motivation, {from:authorityAddress});
 
             const balance = await web3.eth.getBalance(vendor.address);
             const balanceOwner = await vendor.balanceOwner();
-            const reward = await vendor.getVulnerabilityReward(vulnerabilityId);
+            const reward = await vendor.getVulnerabilityReward(vulnerabilityHash);
 
             assert.equal(balance, funds, "The contract should have " + funds +  " wei in its balance");
             assert.equal(balanceOwner, funds, "The balance owner should be " + funds +  " wei (equal to balance)");
