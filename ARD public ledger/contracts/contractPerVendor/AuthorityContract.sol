@@ -368,7 +368,7 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         else if(_actionId==2) // 2: code for Disclose
             _disclose(_vulnerabilityHash, _location);
         else
-            revert("Invalid actionId value: must be either 1 to approve a vulnerability, or 2 to discolse.");
+            revert("Invalid _action value: must be either 1 to approve a vulnerability, or 2 to discolse.");
 
         emit InterledgerEventAccepted(nonce);
     }
