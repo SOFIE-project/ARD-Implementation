@@ -32,7 +32,7 @@ The Vendor smart contract is in charge of registering (and unregistering) produc
 
 ![State machine](./images/StateMachine.png)
 Each circle represents the State of a single vulnerability. The Vendor smart contract stores such information. For each transition, in **bold** is shown the high level event, in *italic* the corresponding smart contract function.
-An Expert uploads to the Authority smart contract a bundle consisting of {vendorAddres, productId, hashlock, vulnerabilityHash}, and the contract pushes a new vulnerability record into the Vendor contract. A vulnerability is approved (or not) by the Authority, which sets the timelock. The Vendor may acknowledge and provide a patch for the vulnerability within the timelock. The condition to disclose a vulnerability V, together with the secret sent matching the hashlock, is the following:
+An Expert uploads to the Authority smart contract a bundle consisting of {vendorAddres, productId, hashlock, vulnerabilityHash}, and the contract pushes a new vulnerability record into the Vendor contract. A vulnerability is uniquely identified by its hash, the vulnerabilityHash input parameter, and its value will be used as key in the subsequent steps. A vulnerability is approved (or not) by the Authority, which sets the timelock. The Vendor may acknowledge and provide a patch for the vulnerability within the timelock. The condition to disclose a vulnerability V, together with the secret sent matching the hashlock, is the following:
 
 - (V.State == Valid AND V.AckTimelock.Expired)
 - OR
@@ -69,7 +69,7 @@ A Vendor deploys a VendorContract calling a function to the AuthorityContract, w
 ## Integration with SOFIE Interledger
 
 The AuthorityContract implements the interfaces *InterledgerSenderInterface* and *InterledgerReceiverInterface* to be compliant with SOFIE Interledger.
-- *InterledgerSenderInterface*: the contract exposes the event *InterledgerEventSending(uint id, bytes data)* where *id* is our vulnerability id *v_id* and *data* application specific data to send. This event is emitted by the *publishSecret* function to communicate the input secret to the other ledger;
+- *InterledgerSenderInterface*: the contract exposes the event *InterledgerEventSending(uint id, bytes data)* where *id* is the *vulnerabilityHash* (casted to unit) and *data* application specific data to send. This event is emitted by the *publishSecret* function to communicate the input secret to the other ledger;
 - *InterledgerReceiverInterface*: the contract exposes the *interledgerReceive(uint nonce, bytes data)* function that is triggered in two moments: 1) to receive the approval of a vulnerability; 2) to receive the disclosure data.
 - that is required by the couterpart to receive data. *nonce* is a parameter used by Interledger, and *bytes* is application specific data to receive.
   
@@ -77,21 +77,21 @@ The AuthorityContract implements the interfaces *InterledgerSenderInterface* and
 
 The function *publishSecret* needs to communicate to Interledger the received secret, if correct. The function encodes two parameters in *data*: the vulnerability id and the secret:
 
-    bytes memory data = abi.encode(_vulnerabilityId, _secret);
-    emit InterledgerEventSending(_vulnerabilityId, data);
+    bytes memory data = abi.encode(_vulnerabilityHash, _secret);
+    emit InterledgerEventSending(_vulnerabilityHash, data);
 
 ### Receiving data sending: interledgerReceive
 
 The fuction *interledgerReceive* function is called in two moments. When a vulnerability is approved, the function needs to know which vulnerability id has been approved. When a vulnerability is disclosed, the function needs to know which vulnerability id has been disclosed and the location, URL, containing the vulnerability. To discriminate the two phases, a third parameter, a flag, is used. The function decodes the received *data* in this way:
 
-    (uint _vulnerabilityId, uint _code, string memory _location) =  abi.decode(data, (uint, uint, string));
+    (uint _vulnerabilityHash, uint _action, string memory _location) =  abi.decode(data, (uint, uint, string));
 
-    if(_code==1) 
-        _approve(_vulnerabilityId);             // Execute code for the approval
-    else if(_code==2)
-        _disclose(_vulnerabilityId, _location); // Execute code for the disclosure
+    if(_action==1) 
+        _approve(_vulnerabilityHash);             // Execute code for the approval
+    else if(_action==2)
+        _disclose(_vulnerabilityHash, _location); // Execute code for the disclosure
     else
-        throw;
+        revert("Invalid _action value: must be either 1 to approve a vulnerability, or 2 to discolse.");
 
     emit InterledgerEventAccepted(nonce);
 

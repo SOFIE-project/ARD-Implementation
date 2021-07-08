@@ -1,8 +1,5 @@
 pragma solidity ^0.6.0;
 
- //Remix only
- //import "https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/access/Ownable.sol";
-
 import "./VendorContract.sol";
 import "./VendorFactory.sol";
 import "./InterledgerSenderInterface.sol";
@@ -28,12 +25,8 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
     // Data structures to map the address of a Vendor EOA to a Vendor data structure
     mapping(address => VendorRecord) public vendorRecords;
 
-    // Map a vulnerabilityId to the related vendor
-    mapping(uint => address) public VendorVulnerabilities; 
-
-    // Vulnerability ID incremental counter
-    uint ID;
-
+    // Map a vulnerabilityHash to the related vendor
+    mapping(bytes32 => address) public VendorVulnerabilities; 
 
     /**
         Structs and Enums
@@ -64,10 +57,10 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         Events
      */
 
-    event LogVulnerabilityNew(uint indexed vulnerabilityId, address indexed expert, address indexed vendor, bytes32 hashlock, bytes32 vulnerabilityHash    );
-    event LogVulnerabilityApproval(uint indexed vulnerabilityId, uint32 ackTimelock, uint32 timelock, VendorContract.State state);
-    event LogVulnerabilityDisclose(uint indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation);
-    event LogVulnerabilityPatched(uint indexed vulnerabilityId, bool patched, bool timelock_expired);
+    event LogVulnerabilityNew(bytes32 indexed vulnerabilityHash, address indexed expert, address indexed vendor, bytes32 hashlock);
+    event LogVulnerabilityApproval(bytes32 indexed vulnerabilityHash, uint32 ackTimelock, uint32 timelock, VendorContract.State state);
+    event LogVulnerabilityDisclose(bytes32 indexed vulnerabilityHash, address indexed communicator, string vulnerabilityLocation);
+    event LogVulnerabilityPatched(bytes32 indexed vulnerabilityHash, bool patched, bool timelock_expired);
 
     event VendorRegistered(address indexed vendor, address vendorContract);
     event VendorUnregistered(address indexed vendor);
@@ -85,44 +78,44 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         _;
     }
 
-    modifier vulnerabilityExists(uint _vulnerabilityId) {
-        require(haveVulnerability(_vulnerabilityId), "vulnerabilityId does not exist");
+    modifier vulnerabilityExists(bytes32 _vulnerabilityHash) {
+        require(haveVulnerability(_vulnerabilityHash), "Vulnerability identified by _vulnerabilityHash does not exist");
         _;
     }
 
-    modifier hashlockMatches(uint _vulnerabilityId, uint _secret) {
+    modifier hashlockMatches(bytes32 _vulnerabilityHash, uint _secret) {
 
-        address _vendor = VendorVulnerabilities[_vulnerabilityId];
+        address _vendor = VendorVulnerabilities[_vulnerabilityHash];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
-        (,,bytes32 _hashlock,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        (,,bytes32 _hashlock,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityHash);
         require(_hashlock == keccak256(abi.encodePacked(_secret)),"Hashed secret and hashlock do not match");
         _;
     }
 
     /**
         @notice Check if a vulnerability id exists
-        @param _vulnerabilityId The vulnerability identifier, uint
-        @return exists True if _vulnerabilityId exists, false otherwise
+        @param _vulnerabilityHash The vulnerability identifier, bytes32
+        @return exists True if _vulnerabilityHash exists, false otherwise
         @dev Internal function
      */
-    function haveVulnerability(uint _vulnerabilityId)
+    function haveVulnerability(bytes32 _vulnerabilityHash)
         internal
         view
         returns (bool exists){
-        exists = (address(VendorVulnerabilities[_vulnerabilityId]) != address(0));
+        exists = (address(VendorVulnerabilities[_vulnerabilityHash]) != address(0));
     }
 
     /**
         @notice Check if a vulnerability is disclosable
-        @param _vulnerabilityId The vulnerability identifier, uint
-        @return True if _vulnerabilityId can be disclosed, false otherwise exists, false otherwise
+        @param _vulnerabilityHash The vulnerability identifier, bytes32
+        @return True if _vulnerabilityHash can be disclosed, false otherwise exists, false otherwise
      */
-    function isDisclosable(uint _vulnerabilityId) public view returns(bool) {
+    function isDisclosable(bytes32 _vulnerabilityHash) public view returns(bool) {
 
-        address _vendor = VendorVulnerabilities[_vulnerabilityId];
+        address _vendor = VendorVulnerabilities[_vulnerabilityHash];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        (,VendorContract.State _state,,uint _timelock,uint _acktimelock,,)=vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        (,VendorContract.State _state,,uint _timelock,uint _acktimelock,,)=vendorContract.getVulnerabilityInfo(_vulnerabilityHash);
         return  ((_state == VendorContract.State.Valid && _acktimelock < block.timestamp ) || (_state == VendorContract.State.Acknowledged && _timelock < block.timestamp));
     }
 
@@ -200,69 +193,64 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
         @param _hashlock The hashlock, bytes32
         @param _productId The id of the product, bytes32
         @param _vulnerabilityHash The hash of the vulnerability data, bytes32
-        @return _vulnerabilityId Id of the new contract. This is needed for subsequent calls
-        @dev If positive, emits LogVulnerabilityNew(uint indexed vulnerabilityId, address indexed researcher, address indexed vendor, bytes32 hashlock, bytes32 vulnerabilityHash)
+        @return _vulnerabilityHash The input vulnerability hash
+        @dev If positive, emits LogVulnerabilityNew(bytes32 indexed vulnerabilityHash, address indexed researcher, address indexed vendor, bytes32 hashlock)
         @dev Reverts if the generated vulnerability id already exists
     */  
     function registerVulnerability(address _vendor, bytes32 _hashlock,
                                 bytes32 _productId, bytes32 _vulnerabilityHash)
         external
-        returns (uint _vulnerabilityId) {
+        returns (bytes32) {
 
         // Check vendor if vendor is registered
         require(isVendorRegistered(_vendor), "This vendor is not registered");
-
-        // Create a new entry
-        _vulnerabilityId = ++ID;
 
         // Retrive VendorContract
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
         // Associate the contract with the vulnerability metadata
-        vendorContract.newVulnerability(_vulnerabilityId,
+        vendorContract.newVulnerability(_vulnerabilityHash,
                                         payable(msg.sender),
                                         _productId,
-                                        _vulnerabilityHash,
                                         _hashlock);
 
-        VendorVulnerabilities[_vulnerabilityId] = _vendor;
+        VendorVulnerabilities[_vulnerabilityHash] = _vendor;
 
         emit LogVulnerabilityNew(
-            _vulnerabilityId,
+            _vulnerabilityHash,
             msg.sender,
             _vendor,
-            _hashlock,
-            _vulnerabilityHash
+            _hashlock
         );
 
-        return _vulnerabilityId;
+        return _vulnerabilityHash;
     }
 
     /**
         @notice Approve the vulnerability contract and provides the lock terms.
-        @param _vulnerabilityId The vulnerability identifier, uint
-        @dev Emits LogVulnerabilityApproval(uint indexed vulnerabilityId, uint32 timelock, VendorContract.State state)
-        @dev Only the Authority owner, _vulnerabilityId exists
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
+        @dev Emits LogVulnerabilityApproval(uint indexed vulnerabilityHash, uint32 timelock, VendorContract.State state)
+        @dev Only the Authority owner, _vulnerabilityHash exists
      */
-    function _approve(uint _vulnerabilityId)
+    function _approve(bytes32 _vulnerabilityHash)
         private
-        vulnerabilityExists(_vulnerabilityId) {
+        vulnerabilityExists(_vulnerabilityHash) {
 
         // Retrive VendorContract
-        address _vendor = VendorVulnerabilities[_vulnerabilityId];
+        address _vendor = VendorVulnerabilities[_vulnerabilityHash];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
         uint32 _ackTimelock = uint32(block.timestamp + 1 weeks);
         uint32 _patchTimelock = uint32(_ackTimelock + 12 weeks);
 
-        (,VendorContract.State _state,,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+        (,VendorContract.State _state,,,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityHash);
         require(_state == VendorContract.State.Pending, "The vulnerability should be in pending state");
 
         // Reject if the contract isn't aprroved (the verification is off chain)
-        vendorContract.setTimelock(_vulnerabilityId, _ackTimelock, _patchTimelock);
-        vendorContract.setState(_vulnerabilityId, VendorContract.State.Valid);
+        vendorContract.setTimelock(_vulnerabilityHash, _ackTimelock, _patchTimelock);
+        vendorContract.setState(_vulnerabilityHash, VendorContract.State.Valid);
 
         emit LogVulnerabilityApproval(
-            _vulnerabilityId,
+            _vulnerabilityHash,
             _ackTimelock,
             _patchTimelock,
             VendorContract.State.Valid
@@ -271,83 +259,82 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
 
     /**
         @notice Approve the vulnerability contract and provides the lock terms.
-        @param _vulnerabilityId The vulnerability identifier, uint
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
         @param _flag true if Invalid vulnerability, false if Duplicate vulnerability
-        @dev Emits LogVulnerabilityApproval(uint indexed vulnerabilityId, uint32 timelock, VendorContract.State state)
-        @dev Only the Authority owner, _vulnerabilityId exists
+        @dev Emits LogVulnerabilityApproval(uint indexed vulnerabilityHash, uint32 timelock, VendorContract.State state)
+        @dev Only the Authority owner, _vulnerabilityHash exists
      */
-    function reject(uint _vulnerabilityId, bool _flag) external onlyOwner vulnerabilityExists(_vulnerabilityId) {
+    function reject(bytes32 _vulnerabilityHash, bool _flag) external onlyOwner vulnerabilityExists(_vulnerabilityHash) {
 
-        address _vendor = VendorVulnerabilities[_vulnerabilityId];
+        address _vendor = VendorVulnerabilities[_vulnerabilityHash];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
         if(_flag) {
-            vendorContract.setState(_vulnerabilityId, VendorContract.State.Invalid);        
-            emit LogVulnerabilityApproval(_vulnerabilityId, 0, 0, VendorContract.State.Invalid);
+            vendorContract.setState(_vulnerabilityHash, VendorContract.State.Invalid);        
+            emit LogVulnerabilityApproval(_vulnerabilityHash, 0, 0, VendorContract.State.Invalid);
         }
         else {
-            vendorContract.setState(_vulnerabilityId, VendorContract.State.Duplicate);        
-            emit LogVulnerabilityApproval(_vulnerabilityId, 0, 0, VendorContract.State.Duplicate);
+            vendorContract.setState(_vulnerabilityHash, VendorContract.State.Duplicate);        
+            emit LogVulnerabilityApproval(_vulnerabilityHash, 0, 0, VendorContract.State.Duplicate);
         }
     }
 
 
     /**
         @notice Publish the secret after the secret if the disclosable condition is met. Pay the bounty
-        @param _vulnerabilityId The vulnerability identifier, uint
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
         @param _secret The preimage of the hashlock, uint
         @dev Emits InterledgerEventSending(uint256 id, bytes data)
-        @dev Emits LogVulnerabilityPatched(uint vulnerabilityId, bool patched, bool timelock_expired)
-        @dev The secret mathces the hashlock, _vulnerabilityId exists and the vulnerability is disclosable
+        @dev Emits LogVulnerabilityPatched(uint vulnerabilityHash, bool patched, bool timelock_expired)
+        @dev The secret mathces the hashlock, _vulnerabilityHash exists and the vulnerability is disclosable
         @dev WARNING Function subsceptible to stack too deep compilation error
      */
-    function publishSecret(uint _vulnerabilityId, uint _secret)
+    function publishSecret(bytes32 _vulnerabilityHash, uint _secret)
         external
-        vulnerabilityExists(_vulnerabilityId)
-        hashlockMatches(_vulnerabilityId, _secret) {
+        vulnerabilityExists(_vulnerabilityHash)
+        hashlockMatches(_vulnerabilityHash, _secret) {
         
         // Retrive VendorContract and info
-        address _vendor = VendorVulnerabilities[_vulnerabilityId];
+        address _vendor = VendorVulnerabilities[_vulnerabilityHash];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
         if(msg.sender == vendorContract.owner()) {
 
-            (, VendorContract.State _state,, uint32 _timelock,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityId);
+            (, VendorContract.State _state,, uint32 _timelock,,,) = vendorContract.getVulnerabilityInfo(_vulnerabilityHash);
             require(_state == VendorContract.State.Acknowledged, "The vulnerability can be patched only if previously Acknowledged");
             // if block.timestamp > _timelock, then the vendor released a patch after the expiration of the timelock
-            emit LogVulnerabilityPatched(_vulnerabilityId, true, block.timestamp > _timelock);
+            emit LogVulnerabilityPatched(_vulnerabilityHash, true, block.timestamp > _timelock);
         }
         else {
-            require(isDisclosable(_vulnerabilityId), "The secret cannot be disclosed before the timelock by other than the Vendor");
-            emit LogVulnerabilityPatched(_vulnerabilityId, false, true);
+            require(isDisclosable(_vulnerabilityHash), "The secret cannot be disclosed before the timelock by other than the Vendor");
+            emit LogVulnerabilityPatched(_vulnerabilityHash, false, true);
         }
 
 
         // Set secret and state, and disclose secret
-        vendorContract.setSecret(_vulnerabilityId, _secret);
-        vendorContract.setState(_vulnerabilityId, VendorContract.State.Disclosable);
+        vendorContract.setSecret(_vulnerabilityHash, _secret);
+        vendorContract.setState(_vulnerabilityHash, VendorContract.State.Disclosable);
 
-        // Encoding
-        bytes memory data = abi.encode(_vulnerabilityId, _secret);
-        emit InterledgerEventSending(_vulnerabilityId, data);
+        // Encoding, need uint id for interledger
+        uint vulnerabilityHashUint = uint(_vulnerabilityHash);
+        bytes memory data = abi.encode(_vulnerabilityHash, _secret);
+        emit InterledgerEventSending(vulnerabilityHashUint, data);
 
 
         // Process reward
-        (VendorContract.RewardState _rewardState, uint _amount) = vendorContract.getVulnerabilityReward(_vulnerabilityId);
+        (VendorContract.RewardState _rewardState, uint _amount) = vendorContract.getVulnerabilityReward(_vulnerabilityHash);
 
             // Send the reward only if present (the Vendor has acknowledged and funded the reward)
         if(_rewardState == VendorContract.RewardState.SET && _amount > 0)
-            vendorContract.payBounty(_vulnerabilityId);
+            vendorContract.payBounty(_vulnerabilityHash);
     }
 
     /**
         @param id The id of the vulnerability
         @param location The link where the vulnerability has been published
-        @dev Emits LogVulnerabilityDisclose(uint indexed vulnerabilityId, address indexed communicator, string vulnerabilityLocation)
+        @dev Emits LogVulnerabilityDisclose(uint indexed vulnerabilityHash, address indexed communicator, string vulnerabilityLocation)
      */
-    function _disclose(uint id, string memory location) private vulnerabilityExists(id) {
-
-        // require(haveVulnerability(id), "vulnerabilityId does not exist");
+    function _disclose(bytes32 id, string memory location) private vulnerabilityExists(id) {
 
         // Retrive VendorContract
         address _vendor = VendorVulnerabilities[id];
@@ -374,14 +361,14 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
      */
     function interledgerReceive(uint256 nonce, bytes memory data) override public onlyInterledger {
 
-        (uint _vulnerabilityId, uint _code, string memory _location) =  abi.decode(data, (uint, uint, string));
+        (bytes32 _vulnerabilityHash, uint _actionId, string memory _location) =  abi.decode(data, (bytes32, uint, string));
 
-        if(_code==1) // 1: code for Approve
-            _approve(_vulnerabilityId);
-        else if(_code==2) // 2: code for Disclose
-            _disclose(_vulnerabilityId, _location);
+        if(_actionId==1) // 1: code for Approve
+            _approve(_vulnerabilityHash);
+        else if(_actionId==2) // 2: code for Disclose
+            _disclose(_vulnerabilityHash, _location);
         else
-            throw;
+            revert("Invalid _action value: must be either 1 to approve a vulnerability, or 2 to discolse.");
 
         emit InterledgerEventAccepted(nonce);
     }
@@ -406,16 +393,16 @@ contract AuthorityContract is Ownable, InterledgerSenderInterface, InterledgerRe
 
     /**
         @notice Cancels the vulnerability bounty
-        @param _vulnerabilityId The vulnerability identifier, uint
+        @param _vulnerabilityHash The vulnerability hash identifier, bytes32
         @param _reason The reason why vulnerability has been deleted, string
-        @dev Only the owner, _vulnerabilityId exists
+        @dev Only the owner, _vulnerabilityHash exists
      */
-    function cancelBounty(uint _vulnerabilityId, string calldata _reason) external onlyOwner {
+    function cancelBounty(bytes32 _vulnerabilityHash, string calldata _reason) external onlyOwner {
 
-        address _vendor = VendorVulnerabilities[_vulnerabilityId];
+        address _vendor = VendorVulnerabilities[_vulnerabilityHash];
         VendorContract vendorContract = vendorRecords[_vendor]._contract;
 
-        vendorContract.cancelBounty(_vulnerabilityId, _reason);
+        vendorContract.cancelBounty(_vulnerabilityHash, _reason);
     }
 
 }

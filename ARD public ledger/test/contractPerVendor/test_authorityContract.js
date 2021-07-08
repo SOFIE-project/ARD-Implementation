@@ -1,7 +1,7 @@
 const truffleAssert = require('truffle-assertions');
 const Authority = artifacts.require("AuthorityContract");
-const Vendor = artifacts.require("VendorContract");
-const Factory = artifacts.require("VendorFactory");
+const Vendor = artifacts.require("TestVendorContract");
+const Factory = artifacts.require("TestVendorFactory");
 
 contract("AuthorityContract", function(accounts) {
 
@@ -16,7 +16,6 @@ contract("AuthorityContract", function(accounts) {
         Valid: 2,
         Duplicate: 3,
         Acknowledged: 4,
-        // Patched: 5,
         Disclosable: 5,
         Disclosed: 6
     }
@@ -177,28 +176,16 @@ contract("AuthorityContract", function(accounts) {
             console.log("Register vulnerability " + tx.receipt.gasUsed);
             
             let event = tx["logs"][0].args;
-            let v = await authority.VendorVulnerabilities(event.vulnerabilityId);
-            let info = await vendor.getVulnerabilityInfo(event.vulnerabilityId);
+            let v = await authority.VendorVulnerabilities(event.vulnerabilityHash);
+            let info = await vendor.getVulnerabilityInfo(event.vulnerabilityHash);
 
-            assert.equal(v, vendorAddress, "The id "+event.vulnerabilityId+" should be mapped to " + vendorAddress)
+            assert.equal(v, vendorAddress, "The id "+event.vulnerabilityHash+" should be mapped to " + vendorAddress)
             assert.equal(event.expert, expertAddress, "The sender should be the expert: " + expertAddress);
             assert.equal(event.vendor, vendorAddress, "The target vendor should be " + vendorAddress);
             assert.equal(event.hashlock, hashlock, "The used hashlock should be " + hashlock);
             assert.equal(event.vulnerabilityHash, vulnerabilityHash, "The hash of the vulnerability description should be" + vulnerabilityHash);
             assert.equal(info[0], expertAddress, "The vendor contract should store the vulnerability, and have expert field as" + expertAddress);
-        });
-    
-        // it("Should NOT register a vulnerability already sent (producing the same Id)", async function() {
-    
-        //     await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
-
-        //     await truffleAssert.fails(
-        //         authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress}),
-        //         truffleAssert.ErrorType.REVERT,
-        //         "Vulnerability already exists" // String of the revert
-        //     );
-        // });
-    
+        });   
     });
 
 
@@ -208,7 +195,6 @@ contract("AuthorityContract", function(accounts) {
         let authority;
         let vendor;
         let productId;
-        let vulnerabilityId;
 
         // Solidity block.timestamp is *in seconds*. Need to round them down to integer
         // const timelock = Math.round(new Date() / 1000) + 100000;
@@ -223,23 +209,19 @@ contract("AuthorityContract", function(accounts) {
             tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
             tx = await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
-            vulnerabilityId = tx["logs"][0].args.vulnerabilityId;
         });
 
         it("Should approve a vulnerability", async function() {
 
             let code = 1; // Approve code
             const motivation = "Vulnerability approved";
-            const data = web3.eth.abi.encodeParameters(['uint256', 'uint', 'bytes'], [vulnerabilityId.toNumber(), code, "0x0"]);
-            // let tx = await authority.approve(vulnerabilityId, ackTimelock, timelock, DECISION.Approved, motivation, {from: authorityAddress});
-            let tx = await authority.interledgerReceive(vulnerabilityId, data, {from: interledgerAddress});
+            const data = web3.eth.abi.encodeParameters(['bytes32', 'uint', 'string'], [vulnerabilityHash, code, "0x0"]);
+            let tx = await authority.interledgerReceive(vulnerabilityHash, data, {from: interledgerAddress});
             console.log("Interledger receive: approve " + tx.receipt.gasUsed);
 
             truffleAssert.eventEmitted(tx, 'LogVulnerabilityApproval', (ev) => {                
                 return (
-                        ev.vulnerabilityId == vulnerabilityId,
-                        // ev.timelock == timelock,
-                        // ev.actTimelock == ackTimelock,
+                        ev.vulnerabilityHash == vulnerabilityHash,
                         ev.state == STATUS.Valid
                         );
             }, 'LogVulnerabilityApproval event did not fire with correct parameters');
@@ -248,12 +230,11 @@ contract("AuthorityContract", function(accounts) {
         it("Should not approve a vulnerability: invalid", async function() {
 
             const motivation = "Not relevant imporntance";
-            // let tx = await authority.approve(vulnerabilityId, ackTimelock, timelock, DECISION.Invalid, motivation, {from: authorityAddress});
-            let tx = await authority.reject(vulnerabilityId, true, {from: authorityAddress});
+            let tx = await authority.reject(vulnerabilityHash, true, {from: authorityAddress});
 
             truffleAssert.eventEmitted(tx, 'LogVulnerabilityApproval', (ev) => {                
                 return (
-                        ev.vulnerabilityId == vulnerabilityId,
+                        ev.vulnerabilityHash == vulnerabilityHash,
                         ev.timelock == 0,
                         ev.actTimelock == 0,
                         ev.state == STATUS.Invalid
@@ -264,12 +245,11 @@ contract("AuthorityContract", function(accounts) {
         it("Should not approve a vulnerability: duplicate", async function() {
 
             const motivation = "Already submitted";
-            // let tx = await authority.approve(vulnerabilityId, ackTimelock, timelock, DECISION.Duplicate, motivation, {from: authorityAddress});
-            let tx = await authority.reject(vulnerabilityId, false, {from: authorityAddress});
+            let tx = await authority.reject(vulnerabilityHash, false, {from: authorityAddress});
 
             truffleAssert.eventEmitted(tx, 'LogVulnerabilityApproval', (ev) => {                
                 return (
-                        ev.vulnerabilityId == vulnerabilityId,
+                        ev.vulnerabilityHash == vulnerabilityHash,
                         ev.timelock == 0,
                         ev.actTimelock == 0,
                         ev.state == STATUS.Duplicate
@@ -285,7 +265,6 @@ contract("AuthorityContract", function(accounts) {
         let authority;
         let vendor;
         let productId;
-        let vulnerabilityId;
         
         beforeEach(async function() {
 
@@ -297,11 +276,9 @@ contract("AuthorityContract", function(accounts) {
             tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
             tx = await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
-            vulnerabilityId = tx["logs"][0].args.vulnerabilityId;
-            // await authority.approve(vulnerabilityId, ackTimelock, timelock, DECISION.Approved, "Vulnerability approved", {from: authorityAddress});
             const code = 1;
-            const data = web3.eth.abi.encodeParameters(['uint256', 'uint', 'string'], [vulnerabilityId.toNumber(), code, "null"]);
-            await authority.interledgerReceive(vulnerabilityId, data, {from: interledgerAddress});
+            const data = web3.eth.abi.encodeParameters(['bytes32', 'uint', 'string'], [vulnerabilityHash, code, "null"]);
+            await authority.interledgerReceive(vulnerabilityHash, data, {from: interledgerAddress});
             await web3.eth.sendTransaction({
                 from: vendorAddress,
                 to: vendor.address,
@@ -311,29 +288,29 @@ contract("AuthorityContract", function(accounts) {
 
         it("Should publish the secret: Patched by vendor", async function() {
 
-            await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+            await vendor.acknowledge(vulnerabilityHash, bounty, {from: vendorAddress});
             const expertBalance_before = web3.utils.fromWei(await web3.eth.getBalance(expertAddress), 'ether');
 
-            let tx = await authority.publishSecret(vulnerabilityId, secret, {from: vendorAddress});
+            let tx = await authority.publishSecret(vulnerabilityHash, secret, {from: vendorAddress});
             console.log("Publish secret from vendor " + tx.receipt.gasUsed);
 
-            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityHash);
             const expertBalance_after = web3.utils.fromWei(await web3.eth.getBalance(expertAddress), 'ether');
 
             assert.equal(info[1], STATUS.Disclosable, "The status should be " + STATUS.Disclosable + " (Disclosable)");
             assert.isAtLeast(parseInt(expertBalance_after), parseInt(expertBalance_before), "The expert should gain the reward and thus have higher balance than before");
 
-            const data = web3.eth.abi.encodeParameters(['uint256', 'uint256'], [vulnerabilityId.toNumber(), secret]);
+            const data = web3.eth.abi.encodeParameters(['bytes32', 'uint256'], [vulnerabilityHash, secret]);
             truffleAssert.eventEmitted(tx, 'InterledgerEventSending', (ev) => {                
                 return (
-                        ev.id == vulnerabilityId,
+                        ev.id == vulnerabilityHash,
                         ev.data == data
                         );
             }, 'InterledgerEventSending event did not fire with correct parameters');
 
             truffleAssert.eventEmitted(tx, 'LogVulnerabilityPatched', (ev) => {                
                 return (
-                        ev.id == vulnerabilityId,
+                        ev.id == vulnerabilityHash,
                         ev.patched == true,
                         ev.timelock_expired == false
                         );
@@ -343,7 +320,7 @@ contract("AuthorityContract", function(accounts) {
         it("Should NOT publish the secret: Not Acknowledged by vendor", async function() {
 
             await truffleAssert.fails(
-                authority.publishSecret(vulnerabilityId, secret, {from: vendorAddress}),
+                authority.publishSecret(vulnerabilityHash, secret, {from: vendorAddress}),
                 truffleAssert.ErrorType.REVERT,
                 "The vulnerability can be patched only if previously Acknowledged" // String of the revert
             );
@@ -351,18 +328,18 @@ contract("AuthorityContract", function(accounts) {
 
         it("Should publish the secret: Patched by vendor, after timelock", async function() {
 
-            await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+            await vendor.acknowledge(vulnerabilityHash, bounty, {from: vendorAddress});
             const expertBalance_before = web3.utils.fromWei(await web3.eth.getBalance(expertAddress), 'ether');
 
             // Set timelock to past to avoid waiting, otherwise set to 4 weeks in the smart contract
             const v = await authority.vendorRecords(vendorAddress); // get an object with Vendor's data
             const v_contract = await Vendor.at(v[0]);
-            await v_contract.debug_setTimelock(vulnerabilityId, 1, 2);
+            await v_contract.debug_setTimelock(vulnerabilityHash, 1, 2);
 
             
-            let tx = await authority.publishSecret(vulnerabilityId, secret, {from: vendorAddress});
+            let tx = await authority.publishSecret(vulnerabilityHash, secret, {from: vendorAddress});
 
-            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityHash);
             const expertBalance_after = web3.utils.fromWei(await web3.eth.getBalance(expertAddress), 'ether');
 
             assert.equal(info[1], STATUS.Disclosable, "The status should be " + STATUS.Disclosable + " (Disclosable)");
@@ -372,7 +349,7 @@ contract("AuthorityContract", function(accounts) {
 
             truffleAssert.eventEmitted(tx, 'LogVulnerabilityPatched', (ev) => {                
                 return (
-                        ev.id == vulnerabilityId,
+                        ev.id == vulnerabilityHash,
                         ev.patched == true,
                         ev.timelock_expired == true
                         );
@@ -387,13 +364,13 @@ contract("AuthorityContract", function(accounts) {
             // Set timelock to past to avoid waiting, otherwise set to 1 week in the smart contract
             const v = await authority.vendorRecords(vendorAddress); // get an object with Vendor's data
             const v_contract = await Vendor.at(v[0]);
-            await v_contract.debug_setTimelock(vulnerabilityId, 1, 2);
+            await v_contract.debug_setTimelock(vulnerabilityHash, 1, 2);
             
             
-            let tx = await authority.publishSecret(vulnerabilityId, secret, {from: expertAddress});
+            let tx = await authority.publishSecret(vulnerabilityHash, secret, {from: expertAddress});
             console.log("Publish secret from expert " + tx.receipt.gasUsed);
 
-            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityHash);
             const expertBalance_after = web3.utils.fromWei(await web3.eth.getBalance(expertAddress), 'ether');
 
             assert.equal(info[1], STATUS.Disclosable, "The status should be " + STATUS.Disclosable + " (Disclosable)");
@@ -401,7 +378,7 @@ contract("AuthorityContract", function(accounts) {
 
             truffleAssert.eventEmitted(tx, 'LogVulnerabilityPatched', (ev) => {                
                 return (
-                        ev.id == vulnerabilityId,
+                        ev.id == vulnerabilityHash,
                         ev.patched == false,
                         ev.timelock_expired == true
                         );
@@ -410,7 +387,7 @@ contract("AuthorityContract", function(accounts) {
     
         it("Should publish the secret: timelock expired", async function() {
 
-            await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+            await vendor.acknowledge(vulnerabilityHash, bounty, {from: vendorAddress});
 
             // wait for the ack timelock to expire
             const expertBalance_before = web3.utils.fromWei(await web3.eth.getBalance(expertAddress), 'ether');
@@ -418,13 +395,13 @@ contract("AuthorityContract", function(accounts) {
             // Set timelock to past to avoid waiting, otherwise set to 4 weeks in the smart contract
             const v = await authority.vendorRecords(vendorAddress); // get an object with Vendor's data
             const v_contract = await Vendor.at(v[0]);
-            await v_contract.debug_setTimelock(vulnerabilityId, 1, 2);
+            await v_contract.debug_setTimelock(vulnerabilityHash, 1, 2);
             
     
-            let tx = await authority.publishSecret(vulnerabilityId, secret, {from: expertAddress});
+            let tx = await authority.publishSecret(vulnerabilityHash, secret, {from: expertAddress});
             console.log("Publish secret from expert, with bounty transfer " + tx.receipt.gasUsed);
 
-            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityHash);
             const expertBalance_after = web3.utils.fromWei(await web3.eth.getBalance(expertAddress), 'ether');
 
             assert.equal(info[1], STATUS.Disclosable, "The status should be " + STATUS.Disclosable + " (Disclosable)");
@@ -432,7 +409,7 @@ contract("AuthorityContract", function(accounts) {
 
             truffleAssert.eventEmitted(tx, 'LogVulnerabilityPatched', (ev) => {                
                 return (
-                        ev.id == vulnerabilityId,
+                        ev.id == vulnerabilityHash,
                         ev.patched == false,
                         ev.timelock_expired == true
                         );
@@ -441,10 +418,10 @@ contract("AuthorityContract", function(accounts) {
 
         it("Should NOT publish the secret: ack timelock not expired", async function() {
     
-            await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+            await vendor.acknowledge(vulnerabilityHash, bounty, {from: vendorAddress});
 
             await truffleAssert.fails(
-                authority.publishSecret(vulnerabilityId, secret, {from: expertAddress}),
+                authority.publishSecret(vulnerabilityHash, secret, {from: expertAddress}),
                 truffleAssert.ErrorType.REVERT,
                 "The secret cannot be disclosed before the timelock by other than the Vendor" // String of the revert
             );
@@ -452,12 +429,12 @@ contract("AuthorityContract", function(accounts) {
 
         it("Should NOT publish the secret: secret does not match the hashlock", async function() {
     
-            await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+            await vendor.acknowledge(vulnerabilityHash, bounty, {from: vendorAddress});
 
             // await sleep(10000)
 
             await truffleAssert.fails(
-                authority.publishSecret(vulnerabilityId, 12, {from: expertAddress}),
+                authority.publishSecret(vulnerabilityHash, 12, {from: expertAddress}),
                 truffleAssert.ErrorType.REVERT,
                 "Hashed secret and hashlock do not match" // String of the revert
             );
@@ -472,7 +449,6 @@ contract("AuthorityContract", function(accounts) {
         let authority;
         let vendor;
         let productId;
-        let vulnerabilityId;
 
         // Solidity block.timestamp is *in seconds*. Need to round them down to integer
         const timelock = Math.round(new Date() / 1000) + 100000;
@@ -487,36 +463,34 @@ contract("AuthorityContract", function(accounts) {
             tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
             tx = await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
-            vulnerabilityId = tx["logs"][0].args.vulnerabilityId;
             const code = 1; // Approve
-            const data = web3.eth.abi.encodeParameters(['uint256', 'uint', 'string'], [vulnerabilityId.toNumber(), code, "null"]);
-            await authority.interledgerReceive(vulnerabilityId, data, {from: interledgerAddress});
+            const data = web3.eth.abi.encodeParameters(['bytes32', 'uint', 'string'], [vulnerabilityHash, code, "null"]);
+            await authority.interledgerReceive(vulnerabilityHash, data, {from: interledgerAddress});
             await web3.eth.sendTransaction({
                 from: vendorAddress,
                 to: vendor.address,
                 value: funds
             });            
-            await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
-            // await vendor.patch(vulnerabilityId, {from: vendorAddress});
+            await vendor.acknowledge(vulnerabilityHash, bounty, {from: vendorAddress});
         });
 
         it("Should fully disclose the vulnerability", async function() {
 
-            await authority.publishSecret(vulnerabilityId, secret, {from: vendorAddress});
+            await authority.publishSecret(vulnerabilityHash, secret, {from: vendorAddress});
 
             const code = 2; // Disclose
-            const data = web3.eth.abi.encodeParameters(['uint256', 'uint', 'string'], [vulnerabilityId.toNumber(), code, vulnerabilityLocation]);
+            const data = web3.eth.abi.encodeParameters(['bytes32', 'uint', 'string'], [vulnerabilityHash, code, vulnerabilityLocation]);
             let tx = await authority.interledgerReceive(nonce, data, {from: interledgerAddress});
             console.log("InterledgerReceive: disclose " + tx.receipt.gasUsed);
 
-            const info = await vendor.getVulnerabilityInfo(vulnerabilityId);
+            const info = await vendor.getVulnerabilityInfo(vulnerabilityHash);
 
             assert.equal(info[1], STATUS.Disclosed, "The status should be " + STATUS.Disclosed + " (Disclosed)");
             assert.equal(info[6], vulnerabilityLocation, "The vulnerability location should be " + vulnerabilityLocation);
 
             truffleAssert.eventEmitted(tx, 'LogVulnerabilityDisclose', (ev) => {                
                 return (
-                        ev.vulnerabilityId == vulnerabilityId,
+                        ev.vulnerabilityHash == vulnerabilityHash,
                         ev.communicator == interledgerAddress,
                         ev.vulnerabilityLocation == vulnerabilityLocation
                         );
@@ -531,10 +505,10 @@ contract("AuthorityContract", function(accounts) {
         
         it("Should NOT fully disclose the vulnerability: invalid sender", async function() {
             
-            await authority.publishSecret(vulnerabilityId, secret, {from: vendorAddress});
+            await authority.publishSecret(vulnerabilityHash, secret, {from: vendorAddress});
 
             const code = 2; // Disclose
-            const data = web3.eth.abi.encodeParameters(['uint256', 'uint', 'string'], [vulnerabilityId.toNumber(), code, vulnerabilityLocation]);
+            const data = web3.eth.abi.encodeParameters(['bytes32', 'uint', 'string'], [vulnerabilityHash, code, vulnerabilityLocation]);
 
             await truffleAssert.fails(
                 authority.interledgerReceive(nonce, data, {from: expertAddress}),
@@ -546,7 +520,7 @@ contract("AuthorityContract", function(accounts) {
         it("Should NOT fully disclose the vulnerability: invalid state", async function() {
 
             const code = 2; // Disclose
-            const data = web3.eth.abi.encodeParameters(['uint256', 'uint', 'string'], [vulnerabilityId.toNumber(), code, vulnerabilityLocation]);
+            const data = web3.eth.abi.encodeParameters(['bytes32', 'uint', 'string'], [vulnerabilityHash, code, vulnerabilityLocation]);
 
             await truffleAssert.fails(
                 authority.interledgerReceive(nonce, data, {from: interledgerAddress}),
@@ -563,7 +537,6 @@ contract("AuthorityContract", function(accounts) {
         let authority;
         let vendor;
         let productId;
-        let vulnerabilityId;
         
         beforeEach(async function() {
             factory = await Factory.new({from: authorityAddress});
@@ -574,10 +547,9 @@ contract("AuthorityContract", function(accounts) {
             tx = await vendor.registerProduct(productName, {from: vendorAddress});
             productId = tx["logs"][0].args.productId;
             tx = await authority.registerVulnerability(vendorAddress, hashlock, productId, vulnerabilityHash, {from: expertAddress});
-            vulnerabilityId = tx["logs"][0].args.vulnerabilityId;
             const code = 1; // Approve
-            const data = web3.eth.abi.encodeParameters(['uint256', 'uint', 'string'], [vulnerabilityId.toNumber(), code, "null"]);
-            await authority.interledgerReceive(vulnerabilityId, data, {from: interledgerAddress});
+            const data = web3.eth.abi.encodeParameters(['bytes32', 'uint', 'string'], [vulnerabilityHash, code, "null"]);
+            await authority.interledgerReceive(vulnerabilityHash, data, {from: interledgerAddress});
             await web3.eth.sendTransaction({
                 from: vendorAddress,
                 to: vendor.address,
@@ -588,11 +560,11 @@ contract("AuthorityContract", function(accounts) {
         it("Should cancel the bounty", async function() {
 
             const motivation = "The expert disclosed the vulnerability in www.site.com";
-            await vendor.acknowledge(vulnerabilityId, bounty, {from: vendorAddress});
+            await vendor.acknowledge(vulnerabilityHash, bounty, {from: vendorAddress});
 
-            await authority.cancelBounty(vulnerabilityId, motivation, {from: authorityAddress});
+            await authority.cancelBounty(vulnerabilityHash, motivation, {from: authorityAddress});
 
-            const reward = await vendor.getVulnerabilityReward(vulnerabilityId);
+            const reward = await vendor.getVulnerabilityReward(vulnerabilityHash);
 
             assert.equal(reward[0], REWARDSTATE.CANCELED, "The reward state should be " + REWARDSTATE.CANCELED + " (CANCELED)");
             assert.equal(reward[1], 0, "The reward amount should be 0");
