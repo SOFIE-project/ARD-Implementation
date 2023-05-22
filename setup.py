@@ -16,7 +16,7 @@ setup(
     install_requires=[
         'web3',
         'sqlalchemy',
-        'requests == 2.20.0',
+        'requests == 2.31.0',
         'protobuf >= 3.10.0, < 4',
         'fabric-sdk-py'
     ],
